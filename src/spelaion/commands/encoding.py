@@ -13,12 +13,12 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @command("base64")
 def cmd_base64(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     decode = False
     wrap = 76
@@ -59,7 +59,7 @@ def cmd_base64(
 
 @command("md5sum")
 def cmd_md5sum(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
     for fname, data in read_binary_inputs(files, state, vfs, io, "md5sum"):
@@ -72,7 +72,7 @@ def cmd_md5sum(
 
 @command("sha256sum")
 def cmd_sha256sum(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
     for fname, data in read_binary_inputs(files, state, vfs, io, "sha256sum"):
@@ -85,7 +85,7 @@ def cmd_sha256sum(
 
 @command("hexdump", "xxd")
 def cmd_hexdump(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     canonical = False
     files: list[str] = []
@@ -114,7 +114,7 @@ def cmd_hexdump(
 
 @command("strings")
 def cmd_strings(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     min_len = 4
     files: list[str] = []

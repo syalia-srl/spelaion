@@ -19,7 +19,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 @command("tar")
 def cmd_tar(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     mode: str | None = None  # "c", "x", "t"
     archive: str | None = None
@@ -87,7 +87,7 @@ def _tar_create(
     archive: str,
     files: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     buf = _io.BytesIO()
@@ -123,7 +123,7 @@ def _tar_extract(
     archive: str,
     extract_dir: str | None,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     archive_path = vfs.resolve(archive, state.cwd)
@@ -159,7 +159,7 @@ def _tar_extract(
 def _tar_list(
     archive: str,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     archive_path = vfs.resolve(archive, state.cwd)
@@ -213,7 +213,7 @@ def _gzip_decode(data: bytes) -> bytes:
 
 @command("gzip")
 def cmd_gzip(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     decompress = False
     keep = False
@@ -263,7 +263,7 @@ def _gzip_file(
     keep: bool,
     to_stdout: bool,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult | None:
     """Process a single file for gzip. Returns result on error, else None."""
@@ -304,7 +304,7 @@ def _gzip_file(
 
 @command("gunzip")
 def cmd_gunzip(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return cmd_gzip(["-d", *args], state, vfs, io)
 
@@ -316,7 +316,7 @@ def cmd_gunzip(
 
 @command("bzip2")
 def cmd_bzip2(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     decompress = False
     keep = False
@@ -366,7 +366,7 @@ def _bz2_file(
     keep: bool,
     to_stdout: bool,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult | None:
     """Process a single file for bzip2. Returns result on error."""
@@ -407,7 +407,7 @@ def _bz2_file(
 
 @command("bunzip2")
 def cmd_bunzip2(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return cmd_bzip2(["-d", *args], state, vfs, io)
 
@@ -419,21 +419,21 @@ def cmd_bunzip2(
 
 @command("zcat")
 def cmd_zcat(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return cmd_gzip(["-d", "-c", *args], state, vfs, io)
 
 
 @command("bzcat")
 def cmd_bzcat(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return cmd_bzip2(["-d", "-c", *args], state, vfs, io)
 
 
 @command("lzcat")
 def cmd_lzcat(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Pass-through: no lzma in virtual shell, just cat the input."""
     files = [a for a in args if not a.startswith("-")]
@@ -450,7 +450,7 @@ def cmd_lzcat(
 
 @command("unzip")
 def cmd_unzip(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     list_only = False
     dest_dir: str | None = None
@@ -535,7 +535,7 @@ def cmd_unzip(
 
 @command("cpio")
 def cmd_cpio(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     copy_out = False  # -o
     copy_in = False  # -i
@@ -561,9 +561,7 @@ def cmd_cpio(
         return CommandResult(exit_code=1)
 
 
-def _cpio_out(
-    state: ShellState, vfs: VirtualFilesystem, io: IOContext
-) -> CommandResult:
+def _cpio_out(state: ShellState, vfs: Filesystem, io: IOContext) -> CommandResult:
     """Copy-out: read filenames from stdin, create tar archive to stdout."""
     text = io.stdin.read()
     filenames = [f for f in text.splitlines() if f.strip()]
@@ -586,7 +584,7 @@ def _cpio_out(
 
 def _cpio_in(
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
     create_dirs: bool,
 ) -> CommandResult:
@@ -626,7 +624,7 @@ _AR_HEADER_SIZE = 60
 
 @command("ar")
 def cmd_ar(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if not args:
         io.stderr.write("ar: missing operation\n")
@@ -655,7 +653,7 @@ def _ar_replace(
     archive_name: str,
     member_files: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     """Create or update an ar archive with the given files."""
@@ -689,7 +687,7 @@ def _ar_replace(
 def _ar_list(
     archive_name: str,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     """List members of an ar archive."""
@@ -710,7 +708,7 @@ def _ar_extract(
     archive_name: str,
     member_files: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     """Extract members from an ar archive."""

@@ -16,12 +16,12 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @command("seq")
 def cmd_seq(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     separator = "\n"
     pad_width = False
@@ -80,7 +80,7 @@ def cmd_seq(
 
 @command("sleep")
 def cmd_sleep(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Virtual no-op — returns immediately
     return CommandResult(exit_code=0)
@@ -88,7 +88,7 @@ def cmd_sleep(
 
 @command("env")
 def cmd_env(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     unset_names: set[str] = set()
     i = 0
@@ -107,7 +107,7 @@ def cmd_env(
 
 @command("which")
 def cmd_which(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     from spelaion.commands._registry import COMMANDS
     from spelaion.exec.builtins import BUILTINS
@@ -129,7 +129,7 @@ def cmd_which(
 
 @command("date")
 def cmd_date(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Check for overridable date via $SPELAION_DATE
     override = state.get_var("SPELAION_DATE")
@@ -156,7 +156,7 @@ def cmd_date(
 
 @command("uname")
 def cmd_uname(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     sysname = "VirtualOS"
     nodename = "spelaion"
@@ -187,7 +187,7 @@ def cmd_uname(
 
 @command("whoami")
 def cmd_whoami(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = state.get_var("USER") or "root"
     io.stdout.write(user + "\n")
@@ -196,7 +196,7 @@ def cmd_whoami(
 
 @command("id")
 def cmd_id(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = state.get_var("USER") or "root"
     uid = 0 if user == "root" else 1000
@@ -207,7 +207,7 @@ def cmd_id(
 
 @command("yes")
 def cmd_yes(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     text = " ".join(args) if args else "y"
     # Policy iteration limit to prevent infinite output
@@ -219,7 +219,7 @@ def cmd_yes(
 
 @command("mktemp")
 def cmd_mktemp(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     make_dir = False
     parent_dir: str | None = None
@@ -254,7 +254,7 @@ def cmd_mktemp(
 
 @command("comm")
 def cmd_comm(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     suppress: set[int] = set()
     files: list[str] = []

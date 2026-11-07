@@ -15,7 +15,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 # ---------------------------------------------------------------------------
 # rg (ripgrep)
@@ -60,7 +60,7 @@ def _matches_glob(filename: str, globs: list[str]) -> bool:
 
 
 def _walk_rg(
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     root: str,
     include_hidden: bool,
     type_exts: list[str] | None,
@@ -87,7 +87,7 @@ def _walk_rg(
 
 @command("rg")
 def cmd_rg(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     patterns: list[str] = []
     paths: list[str] = []
@@ -293,7 +293,7 @@ def _rg_print_line(
 
 @command("fd")
 def cmd_fd(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     pattern: str | None = None
     paths: list[str] = []
@@ -450,7 +450,7 @@ def _fd_output(
 
 @command("zip")
 def cmd_zip(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     recursive = False
     junk_paths = False

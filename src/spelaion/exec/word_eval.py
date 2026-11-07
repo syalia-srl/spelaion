@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from spelaion.ast.nodes import Word
     from spelaion.exec.arith_eval import ArithEvaluator
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 class CommandSubstitutionHook(Protocol):
@@ -46,7 +46,7 @@ class WordEvaluator:
 
     Holds references to:
       - *state*: the mutable :class:`ShellState`
-      - *vfs*: the :class:`VirtualFilesystem` (for globbing and tilde)
+      - *vfs*: the :class:`Filesystem` (for globbing and tilde)
       - *arith_ev*: the :class:`ArithEvaluator`
       - *cmdsub_hook*: an optional callback for ``$(...)`` expansion
     """
@@ -56,7 +56,7 @@ class WordEvaluator:
     def __init__(
         self,
         state: ShellState,
-        vfs: VirtualFilesystem,
+        vfs: Filesystem,
         arith_ev: ArithEvaluator,
         cmdsub_hook: CommandSubstitutionHook | None = None,
     ) -> None:

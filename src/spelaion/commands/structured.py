@@ -27,7 +27,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # =====================================================================
@@ -2658,7 +2658,7 @@ _BUILTIN_NAMES: list[str] = [
 def cmd_jq(  # noqa: C901
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     raw_output = False
@@ -2823,7 +2823,7 @@ def _jq_format_output(val: Any, *, raw_output: bool, compact: bool) -> str:
 def cmd_patch(  # noqa: C901
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     strip = 0
@@ -3160,7 +3160,7 @@ def _lines_match(file_lines: list[str], expected: list[str], start: int) -> bool
 def cmd_yq(  # noqa: C901
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     """YAML/TOML/JSON processor using jq filter syntax."""

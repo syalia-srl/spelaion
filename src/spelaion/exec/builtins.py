@@ -15,16 +15,16 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 BuiltinFn = Callable[
-    ["list[str]", "ShellState", "VirtualFilesystem", "IOContext"],
+    ["list[str]", "ShellState", "Filesystem", "IOContext"],
     CommandResult,
 ]
 
 
 def builtin_echo(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement echo builtin.
 
@@ -134,7 +134,7 @@ def _echo_parse_hex(text: str, i: int, n: int) -> tuple[str, int]:
 
 
 def builtin_printf(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement printf builtin with full format string support.
 
@@ -388,7 +388,7 @@ def _apply_format_spec(
 
 
 def builtin_cd(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement cd builtin. Changes cwd if target is a VFS directory."""
     if not args:
@@ -416,7 +416,7 @@ def builtin_cd(
 
 
 def builtin_pwd(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement pwd builtin."""
     io.stdout.write(state.cwd + "\n")
@@ -424,7 +424,7 @@ def builtin_pwd(
 
 
 def builtin_export(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement export builtin."""
     if not args:
@@ -444,7 +444,7 @@ def builtin_export(
 
 
 def builtin_unset(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement unset builtin."""
     for name in args:
@@ -457,19 +457,19 @@ def builtin_unset(
 
 
 def builtin_true(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 def builtin_false(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=1)
 
 
 def builtin_exit(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement exit builtin."""
     code = 0
@@ -483,7 +483,7 @@ def builtin_exit(
 
 
 def builtin_test(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement test/[ builtin.
 
@@ -581,7 +581,7 @@ def _try_int(s: str) -> int | None:
 
 
 def builtin_read(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement read builtin with flag support.
 
@@ -757,7 +757,7 @@ def _find_ifs_char(s: str, ifs: str) -> int:
 
 
 def builtin_shift(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement shift builtin."""
     n = 1
@@ -777,7 +777,7 @@ def builtin_shift(
 
 
 def builtin_return(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement return builtin."""
     code = 0
@@ -820,7 +820,7 @@ class ContinueSignal(Exception):
 
 
 def builtin_break(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement break builtin."""
     levels = 1
@@ -835,7 +835,7 @@ def builtin_break(
 
 
 def builtin_continue(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement continue builtin."""
     levels = 1
@@ -850,7 +850,7 @@ def builtin_continue(
 
 
 def builtin_set(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement set builtin (basic option handling)."""
     if not args:
@@ -896,7 +896,7 @@ def _apply_set_o(state: ShellState, opt: str, enable: bool) -> None:
 
 
 def builtin_local(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement local builtin — creates variables in the current scope frame."""
     for arg in args:
@@ -910,7 +910,7 @@ def builtin_local(
 
 
 def builtin_declare(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement declare builtin with -A support for associative arrays."""
     # Detect -A flag
@@ -993,7 +993,7 @@ _umask_value: int = 0o022
 
 
 def builtin_alias(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement alias builtin.
 
@@ -1019,7 +1019,7 @@ def builtin_alias(
 
 
 def builtin_unalias(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement unalias builtin.
 
@@ -1049,7 +1049,7 @@ def builtin_unalias(
 
 
 def builtin_type(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement type builtin.
 
@@ -1078,7 +1078,7 @@ def builtin_type(
 
 
 def builtin_readonly(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement readonly builtin.
 
@@ -1111,7 +1111,7 @@ def builtin_readonly(
 
 
 def builtin_let(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement let builtin.
 
@@ -1139,7 +1139,7 @@ def builtin_let(
 
 
 def builtin_getopts(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement getopts builtin (basic).
 
@@ -1207,7 +1207,7 @@ def builtin_getopts(
 
 
 def builtin_hash(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement hash builtin (virtual no-op).
 
@@ -1273,7 +1273,7 @@ _BUILTIN_HELP: dict[str, str] = {
 
 
 def builtin_help(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement help builtin.
 
@@ -1303,7 +1303,7 @@ def builtin_help(
 
 
 def builtin_eval(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement eval builtin.
 
@@ -1336,7 +1336,7 @@ def builtin_eval(
 
 
 def builtin_exec(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement the exec builtin.
 
@@ -1358,7 +1358,7 @@ def builtin_exec(
 
 
 def builtin_trap(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement trap builtin (virtual).
 
@@ -1391,7 +1391,7 @@ def builtin_trap(
 
 
 def builtin_ulimit(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement ulimit builtin (virtual).
 
@@ -1432,7 +1432,7 @@ def builtin_ulimit(
 
 
 def builtin_umask(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement umask builtin.
 
@@ -1459,28 +1459,28 @@ def builtin_umask(
 
 
 def builtin_wait(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement wait builtin (no-op — no background processes)."""
     return CommandResult(exit_code=0)
 
 
 def builtin_jobs(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement jobs builtin (no background jobs in virtual shell)."""
     return CommandResult(exit_code=0)
 
 
 def builtin_bg(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement bg builtin (no-op)."""
     return CommandResult(exit_code=0)
 
 
 def builtin_fg(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement fg builtin (no-op)."""
     return CommandResult(exit_code=0)
@@ -1492,7 +1492,7 @@ def builtin_fg(
 
 
 def builtin_times(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Implement times builtin (virtual — always zero)."""
     io.stdout.write("0m0.000s 0m0.000s\n")

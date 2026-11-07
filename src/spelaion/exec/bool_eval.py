@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 class BoolEvaluator:
@@ -26,7 +26,7 @@ class BoolEvaluator:
     ``-o``, ``!``), and single-argument truth tests.
     """
 
-    def __init__(self, state: ShellState, vfs: VirtualFilesystem) -> None:
+    def __init__(self, state: ShellState, vfs: Filesystem) -> None:
         self.state = state
         self.vfs = vfs
 

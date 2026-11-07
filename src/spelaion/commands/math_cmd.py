@@ -11,12 +11,12 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @command("expr")
 def cmd_expr(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if not args:
         io.stderr.write("expr: missing operand\n")
@@ -140,7 +140,7 @@ def _apply_op(op: str, left: int | str, right: int | str) -> int | str:  # noqa:
 
 @command("bc")
 def cmd_bc(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     text = io.stdin.read().strip()
     if not text:

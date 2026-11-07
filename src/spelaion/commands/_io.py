@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 def read_text(
     path: str,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
     cmd: str,
 ) -> str | None:
@@ -37,7 +37,7 @@ def read_text(
 def read_text_inputs(
     files: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
     cmd: str,
 ) -> tuple[str, int]:
@@ -62,7 +62,7 @@ def read_text_inputs(
 def read_binary_inputs(
     files: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
     cmd: str,
 ) -> list[tuple[str, bytes | None]]:

@@ -14,7 +14,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 @command("fold")
 def cmd_fold(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     width = 80
     break_spaces = False
@@ -87,7 +87,7 @@ def _fold_spaces(line: str, width: int, io: IOContext) -> None:
 
 @command("expand")
 def cmd_expand(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     tab_size = 8
     files: list[str] = []
@@ -120,7 +120,7 @@ def cmd_expand(
 
 @command("cmp")
 def cmd_cmp(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     verbose = False
     silent = False
@@ -184,7 +184,7 @@ def cmd_cmp(
 
 @command("split")
 def cmd_split(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     line_count: int | None = None
     byte_count: int | None = None
@@ -258,7 +258,7 @@ def _split_suffix(index: int) -> str:
 
 @command("od")
 def cmd_od(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     addr_radix = "o"  # default octal addresses
     type_spec = "oS"  # default octal short (words)
@@ -350,7 +350,7 @@ def _format_od_values(chunk: bytes, type_spec: str) -> str:
 
 @command("tsort")
 def cmd_tsort(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
     text, exit_code = read_text_inputs(files, state, vfs, io, "tsort")
@@ -413,7 +413,7 @@ def cmd_tsort(
 
 @command("factor")
 def cmd_factor(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     numbers: list[str] = [a for a in args if not a.startswith("-")]
 
@@ -460,7 +460,7 @@ def _prime_factors(n: int) -> list[int]:
 
 @command("egrep")
 def cmd_egrep(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     from spelaion.commands.search import cmd_grep
 
@@ -469,7 +469,7 @@ def cmd_egrep(
 
 @command("fgrep")
 def cmd_fgrep(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     from spelaion.commands.search import cmd_grep
 
@@ -483,7 +483,7 @@ def cmd_fgrep(
 
 @command("hd")
 def cmd_hd(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     from spelaion.commands.encoding import cmd_hexdump
 

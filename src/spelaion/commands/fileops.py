@@ -19,7 +19,7 @@ from spelaion.vfs.nodes import DirNode, FileNode
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ------------------------------------------------------------------
@@ -29,16 +29,14 @@ if TYPE_CHECKING:
 _NodeT = FileNode | DirNode
 
 
-def _resolve_paths(
-    raw: list[str], state: ShellState, vfs: VirtualFilesystem
-) -> list[str]:
+def _resolve_paths(raw: list[str], state: ShellState, vfs: Filesystem) -> list[str]:
     """Resolve a list of raw path arguments to absolute VFS paths."""
     return [vfs.resolve(p, state.cwd) for p in raw]
 
 
 def _apply_recursive(
     path: str,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     fn: Callable[[_NodeT], None],
 ) -> None:
     """Walk *path* recursively, calling *fn(node)* on every node."""
@@ -132,7 +130,7 @@ def _is_octal(s: str) -> bool:
 def cmd_chmod(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     recursive = False
@@ -196,7 +194,7 @@ def cmd_chmod(
 def cmd_chown(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     recursive = False
@@ -262,7 +260,7 @@ def cmd_chown(
 def cmd_chgrp(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     recursive = False
@@ -311,7 +309,7 @@ def cmd_chgrp(
 def cmd_rmdir(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     dirs = [a for a in args if not a.startswith("-")]
@@ -344,7 +342,7 @@ def cmd_rmdir(
 def cmd_stat(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
@@ -381,7 +379,7 @@ def cmd_stat(
 # ------------------------------------------------------------------
 
 
-def _du_size(path: str, vfs: VirtualFilesystem) -> int:
+def _du_size(path: str, vfs: Filesystem) -> int:
     """Compute the total size of all files under *path*."""
     node = vfs.get_node(path)
     if node is None:
@@ -402,7 +400,7 @@ def _du_size(path: str, vfs: VirtualFilesystem) -> int:
 def cmd_du(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     summary = False
@@ -465,7 +463,7 @@ def cmd_du(
 def cmd_df(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     human = "-h" in args
@@ -473,16 +471,12 @@ def cmd_df(
     total_files = 0
     total_bytes = 0
 
-    def _count(node: DirNode, prefix: str) -> None:
-        nonlocal total_files, total_bytes
-        for name, child in node.children.items():
-            if isinstance(child, FileNode):
+    for dirpath, _, filenames in vfs.walk("/"):
+        for name in filenames:
+            node = vfs.get_node(dirpath.rstrip("/") + "/" + name)
+            if isinstance(node, FileNode):
                 total_files += 1
-                total_bytes += len(child.content)
-            else:
-                _count(child, prefix.rstrip("/") + "/" + name)
-
-    _count(vfs.root, "/")
+                total_bytes += len(node.content)
 
     sz = _human_size(total_bytes) if human else str(total_bytes)
     io.stdout.write("Filesystem      Files  Size\n")
@@ -500,7 +494,7 @@ def cmd_df(
 def cmd_cksum(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
@@ -538,7 +532,7 @@ def cmd_cksum(
 def cmd_link(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     positional = [a for a in args if not a.startswith("-")]
@@ -572,7 +566,7 @@ def cmd_link(
 def cmd_shred(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     remove = False
@@ -618,7 +612,7 @@ def cmd_shred(
 
 
 def _tree_walk(
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     path: str,
     io: IOContext,
     prefix: str,
@@ -648,7 +642,7 @@ def _tree_walk(
 def cmd_tree(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     dirs = [a for a in args if not a.startswith("-")]
@@ -684,7 +678,7 @@ def cmd_tree(
 def cmd_mkfifo(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     names = [a for a in args if not a.startswith("-")]
@@ -719,7 +713,7 @@ def cmd_mkfifo(
 def cmd_dd(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     if_file: str | None = None

@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     from spelaion.policy.decisions import PolicyEngine
     from spelaion.runtime.state import ShellState
     from spelaion.tools.registry import ToolRegistry
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 class CommandEvaluator:
@@ -72,7 +72,7 @@ class CommandEvaluator:
     def __init__(
         self,
         state: ShellState,
-        vfs: VirtualFilesystem,
+        vfs: Filesystem,
         tools: ToolRegistry,
         policy: PolicyEngine,
         word_ev: WordEvaluator,
@@ -269,13 +269,14 @@ class CommandEvaluator:
                 io.stderr.write(f"spelaion: {cmd_name}: command not found\n")
                 result = CommandResult(exit_code=127)
 
-        self._finalize_io(
+        if not self._finalize_io(
             io,
             saved_stdout,
             saved_stderr,
             stdout_redirected,
             stderr_redirected,
-        )
+        ):
+            result = CommandResult(exit_code=1)
         self._restore_vars_if_temporary(node, saved_vars)
         self.state.last_status = result.exit_code
         return result
@@ -322,7 +323,11 @@ class CommandEvaluator:
             cmd_fn = COMMANDS.get(cmd_name)
             if cmd_fn is not None:
                 io.executor = self
-                return cmd_fn(cmd_args, self.state, self.vfs, io)
+                try:
+                    return cmd_fn(cmd_args, self.state, self.vfs, io)
+                except OSError as e:
+                    io.stderr.write(f"{cmd_name}: {e.strerror or e}\n")
+                    return CommandResult(exit_code=1)
             io.stderr.write(f"spelaion: {cmd_name}: builtin not implemented\n")
             return CommandResult(exit_code=2)
 
@@ -331,6 +336,9 @@ class CommandEvaluator:
             return builtin_fn(cmd_args, self.state, self.vfs, io)
         except SystemExit as e:
             return CommandResult(exit_code=e.code if isinstance(e.code, int) else 0)
+        except OSError as e:
+            io.stderr.write(f"{cmd_name}: {e.strerror or e}\n")
+            return CommandResult(exit_code=1)
 
     # ------------------------------------------------------------------
     # Control flow
@@ -503,11 +511,8 @@ class CommandEvaluator:
             node.redirections, io, self.state, self.vfs, self.cmdsub_hook
         )
         result = self.execute_node(node.body, io)
-        # Flush VFS write buffers
-        if isinstance(io.stdout, VFSWriteBuffer):
-            io.stdout.flush_to_vfs()
-        if isinstance(io.stderr, VFSWriteBuffer):
-            io.stderr.flush_to_vfs()
+        if not self._flush_redirects(io, saved_stderr):
+            result = CommandResult(exit_code=1)
         # Restore original streams
         io.stdin = saved_stdin
         io.stdout = saved_stdout
@@ -618,14 +623,26 @@ class CommandEvaluator:
         saved_stderr: StringIO | None = None,
         stdout_redirected: bool = False,
         stderr_redirected: bool = False,
-    ) -> None:
-        if isinstance(io.stdout, VFSWriteBuffer):
-            io.stdout.flush_to_vfs()
-        if isinstance(io.stderr, VFSWriteBuffer):
-            io.stderr.flush_to_vfs()
+    ) -> bool:
+        """Flush redirections and restore streams; ``False`` if a write failed."""
+        err = saved_stderr if saved_stderr is not None else io.stderr
+        flushed = self._flush_redirects(io, err)
         # Restore original streams so subsequent commands in the
         # sequence write to the parent IOContext, not the VFS buffer.
         if stdout_redirected and saved_stdout is not None:
             io.stdout = saved_stdout
         if stderr_redirected and saved_stderr is not None:
             io.stderr = saved_stderr
+        return flushed
+
+    @staticmethod
+    def _flush_redirects(io: IOContext, err: StringIO) -> bool:
+        """Write redirected output to its files; report a refused write on *err*."""
+        for buf in (io.stdout, io.stderr):
+            if isinstance(buf, VFSWriteBuffer):
+                try:
+                    buf.flush_to_vfs()
+                except OSError as e:
+                    err.write(f"spelaion: {buf.path}: {e.strerror or e}\n")
+                    return False
+        return True

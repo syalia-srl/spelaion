@@ -20,7 +20,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 @command("tac")
 def cmd_tac(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
     text, exit_code = read_text_inputs(files, state, vfs, io, "tac")
@@ -47,7 +47,7 @@ def cmd_tac(
 
 @command("sha1sum")
 def cmd_sha1sum(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
     for fname, data in read_binary_inputs(files, state, vfs, io, "sha1sum"):
@@ -67,7 +67,7 @@ def cmd_sha1sum(
 def cmd_uuidgen(
     args: list[str],
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> CommandResult:
     # -r (random) is the default and only supported mode
@@ -82,7 +82,7 @@ def cmd_uuidgen(
 
 @command("shuf")
 def cmd_shuf(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     count: int | None = None
     echo_words: list[str] | None = None
@@ -212,7 +212,7 @@ def _detect_file_type(content: bytes, filename: str) -> str:
 
 @command("file")
 def cmd_file(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     files = [a for a in args if not a.startswith("-")]
     if not files:
@@ -245,7 +245,7 @@ def cmd_file(
 
 @command("column")
 def cmd_column(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     table_mode = False
     separator: str | None = None
@@ -304,7 +304,7 @@ def cmd_column(
 
 @command("fmt")
 def cmd_fmt(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     width = 75
     files: list[str] = []
@@ -348,7 +348,7 @@ def cmd_fmt(
 
 @command("envsubst")
 def cmd_envsubst(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     text = io.stdin.read()
 
@@ -369,7 +369,7 @@ def cmd_envsubst(
 
 @command("install")
 def cmd_install(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     mode: int | None = None
     create_dir = False

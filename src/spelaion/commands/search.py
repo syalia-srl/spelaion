@@ -13,7 +13,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ _GREP_BOOL_FLAGS: dict[str, str] = {
 
 @command("grep")
 def cmd_grep(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     patterns: list[str] = []
     files: list[str] = []
@@ -242,7 +242,7 @@ def _grep_print_line(
 
 @command("find")
 def cmd_find(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     paths: list[str] = []
     predicates: list[tuple[str, str]] = []
@@ -363,7 +363,7 @@ def _run_sub(executor: object, cmd_line: list[str], io: IOContext) -> None:
 
 @command("xargs")
 def cmd_xargs(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     replace_str: str | None = None
     max_args: int | None = None

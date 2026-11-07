@@ -1,4 +1,4 @@
-"""Redirection handling against the VirtualFilesystem.
+"""Redirection handling against the Filesystem.
 
 All targets resolve to VFS paths. No real file I/O.
 """
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from spelaion.exec.cmd_eval import CommandEvaluator
     from spelaion.exec.word_eval import CommandSubstitutionHook
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @dataclass
@@ -31,7 +31,7 @@ def apply_redirections(  # noqa: C901
     redirections: tuple[Redirection, ...],
     io_ctx: IOContext,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     cmdsub_hook: CommandSubstitutionHook | None = None,
 ) -> IOContext:
     """Apply redirections to an IOContext, reading/writing from VFS."""
@@ -92,11 +92,16 @@ def apply_redirections(  # noqa: C901
 class VFSWriteBuffer(StringIO):
     """A StringIO that flushes to VFS on close/getvalue."""
 
-    def __init__(self, vfs: VirtualFilesystem, path: str, append: bool) -> None:
+    def __init__(self, vfs: Filesystem, path: str, append: bool) -> None:
         super().__init__()
         self._vfs = vfs
         self._path = path
         self._append = append
+
+    @property
+    def path(self) -> str:
+        """The sandbox path this buffer writes to."""
+        return self._path
 
     def flush_to_vfs(self) -> None:
         """Write accumulated content to VFS."""
