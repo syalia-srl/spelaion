@@ -166,6 +166,29 @@ def test_defaults() -> None:
     assert Result() == Result(stdout="", stderr="", exit_code=0, timed_out=False)
 
 
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"timeout_s": float("inf")},
+        {"timeout_s": float("nan")},
+        {"timeout_s": 0},
+        {"timeout_s": -1},
+        {"memory_mb": 0},
+        {"memory_mb": 1.5},
+        {"max_output": -1},
+        {"max_disk": 0},
+        {"max_disk": True},
+    ],
+)
+def test_bad_limits_raise(bad: dict[str, object]) -> None:
+    with pytest.raises(ValueError, match=next(iter(bad))):
+        Limits(**bad)  # pyright: ignore[reportArgumentType]
+
+
+def test_fractional_timeout_allowed() -> None:
+    assert Limits(timeout_s=0.5).timeout_s == 0.5
+
+
 # --- bash -------------------------------------------------------------------
 
 
