@@ -23,6 +23,8 @@ from spelaion.vfs.mounts import Mount, MountFs
 
 _CONTEXT_LINES = 3
 
+OUT_OF_MEMORY = "spelaion: out of memory\n"
+
 _log = logging.getLogger("spelaion")
 
 
@@ -81,6 +83,9 @@ class Shell:
             exit_code = executor.execute_node(program, io).exit_code
         except SystemExit as e:
             exit_code = e.code if isinstance(e.code, int) else 0
+        except MemoryError:
+            # The memory cap hit: no traceback, and drop what output there is.
+            return Result(stderr=OUT_OF_MEMORY, exit_code=1)
         except Exception as e:
             # A command bug must come back as a result, not end the call.
             _log.exception("internal error running a bash call")
