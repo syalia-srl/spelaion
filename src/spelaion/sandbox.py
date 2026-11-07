@@ -53,13 +53,23 @@ class Sandbox:
     ) -> None:
         _check_mounts(mounts)
         if python:
-            from spelaion.python.fetch import ensure_python
+            from spelaion.python.fetch import cache_dir, ensure_python
             from spelaion.python.runner import reserved
 
+            cache = cache_dir().resolve()
             for m in mounts:
                 if reserved(m.path):
                     raise ValueError(
                         f"mount {m.path}: /lib and /site belong to python here"
+                    )
+                host = Path(m.host).resolve()
+                # The cache holds native code the next process loads.
+                if not m.readonly and (
+                    cache.is_relative_to(host) or host.is_relative_to(cache)
+                ):
+                    raise ValueError(
+                        f"mount {m.path}: a writable mount must not hold or lie "
+                        f"inside the python cache {cache}"
                     )
             ensure_python()
         fs = MountFs(list(mounts), max_disk=limits.max_disk)

@@ -42,6 +42,10 @@ BOOTSTRAP = (
 # the parent died mid-call and can no longer kill the child.
 GRACE = 5.0
 
+# The guest's epoch deadline is this much after the call's, so the parent
+# always reports the timeout first; the epoch only backs up the parent.
+PYTHON_LAG = 0.5
+
 # Under TEST_HOOKS, replaces GRACE so a test can outlive the child's timer fast.
 TEST_GRACE = "SPELAION_TEST_GRACE"
 
@@ -63,13 +67,17 @@ def main(
     """Serve ``call`` messages on *conn* until the parent closes it."""
     limit = limits.memory_mb * 2**20
     resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
+    # No single file the child writes passes the disk cap; a write past it
+    # fails with EFBIG instead of ending the process.
+    signal.signal(signal.SIGXFSZ, signal.SIG_IGN)
+    resource.setrlimit(resource.RLIMIT_FSIZE, (limits.max_disk, limits.max_disk))
     # Ctrl-C reaches the whole process group; the parent decides what stops.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     # SIGALRM's default action ends the process even inside a C loop (a
     # catastrophic regex), where a Python handler would never run.
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
     shell = Shell(mounts, cwd, env, limits)
-    python_cmd = _Python(limits.memory_mb) if python else None
+    python_cmd = _Python(limits) if python else None
     if python_cmd is not None:
         python_cmds.install(python_cmd)
     for name in host_names:
@@ -89,8 +97,8 @@ def main(
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
         signal.setitimer(signal.ITIMER_REAL, limits.timeout_s + grace)
         if python_cmd is not None:
-            # The parent's deadline as known here; the itimer fires later.
-            python_cmd.deadline = time.monotonic() + limits.timeout_s
+            # After the parent's deadline as known here; the itimer fires later.
+            python_cmd.deadline = time.monotonic() + limits.timeout_s + PYTHON_LAG
         try:
             result = shell.call(msg[1], msg[2])
         except MemoryError:
@@ -103,8 +111,8 @@ def main(
 class _Python:
     """``python`` and ``python3``: CPython for WASI over the shell's mounts."""
 
-    def __init__(self, memory_mb: int) -> None:
-        self.memory_mb = memory_mb
+    def __init__(self, limits: Limits) -> None:
+        self.limits = limits
         self.deadline = 0.0
 
     def __call__(
@@ -120,7 +128,8 @@ class _Python:
             env=dict(state.exported_env),
             fs=vfs,
             deadline=self.deadline,
-            memory_mb=self.memory_mb,
+            memory_mb=self.limits.memory_mb,
+            max_output=self.limits.max_output,
         )
         io.stdout.write(out)
         io.stderr.write(err)

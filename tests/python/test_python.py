@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -109,6 +111,10 @@ def test_no_socket(sb: Sandbox) -> None:
 def test_infinite_loop(sb_2s: Sandbox) -> None:
     r = sb_2s.bash("python -c 'while True: pass'")
     assert r.timed_out
+    # The parent's deadline (send + timeout_s) comes before the guest's epoch
+    # deadline (arrival + timeout_s), so the parent stops and restarts the
+    # child; the child's own itimer (timeout_s + GRACE) never gets to fire.
+    assert r.stderr == "spelaion: timed out after 2s\n"
 
 
 def test_disk_cap_after_python(sb_cap_1mb: Sandbox) -> None:
@@ -165,6 +171,7 @@ def test_exported_env(sb: Sandbox) -> None:
 def test_stdlib_seal(sb: Sandbox) -> None:
     r = sb.bash("python -c 'import subprocess; subprocess.run([\"ls\"])'")
     assert r.exit_code == 1
+    assert r.stderr.endswith("OSError: [Errno 58] wasi does not support processes.\n")
 
 
 def test_lib_and_site_readonly(sb: Sandbox) -> None:
@@ -178,10 +185,9 @@ def test_lib_and_site_readonly(sb: Sandbox) -> None:
 def test_symlink_inside_mount_is_followed(sb: Sandbox) -> None:
     sb.write("/scratch/t", "hi")
     r = sb.bash('python -c \'import os; os.symlink("t", "/scratch/l")\'')
-    if r.exit_code == 0:
-        assert sb.bash("cat /scratch/l").stdout == "hi"
-    else:
-        assert "symlink" not in sb.bash("ls /scratch").stdout
+    assert r.exit_code == 0, r.stderr
+    assert sb.bash("cat /scratch/l").stdout == "hi"
+    assert sb.bash("python -c 'print(open(\"/scratch/l\").read())'").stdout == "hi\n"
 
 
 def test_symlink_outside_mount_is_unreadable(sb: Sandbox, tmp_path: Path) -> None:
@@ -258,6 +264,7 @@ def _run(tmp_path: Path, code: str, deadline: float) -> tuple[str, str, int]:
         fs=MountFs([Mount("/scratch", tmp_path)]),
         deadline=deadline,
         memory_mb=256,
+        max_output=30_000,
     )
 
 
@@ -312,3 +319,144 @@ def test_cli_fetch_python(capsys: pytest.CaptureFixture[str]) -> None:
 def test_missing_module(sb: Sandbox) -> None:
     r = sb.bash("python -m nosuchmod")
     assert r.exit_code == 1 and r.stderr == "python: No module named nosuchmod\n"
+
+
+# --- Output and disk while the guest runs -----------------------------------
+
+# Every write test stays bounded, so a regression cannot fill the disk.
+_SMALL = Limits(timeout_s=10, max_output=10_000, max_disk=1_000_000)
+
+
+@pytest.fixture
+def sb_small(tmp_path: Path) -> Iterator[Sandbox]:
+    with _sandbox(tmp_path, _SMALL) as s:
+        yield s
+
+
+def test_output_limit_stops_the_guest(sb_small: Sandbox) -> None:
+    t = time.monotonic()
+    r = sb_small.bash(
+        "python -c 'import sys\nfor _ in range(200): sys.stdout.write(\"x\" * 2**20)'"
+    )
+    assert time.monotonic() - t < 3
+    assert r.exit_code == 1
+    assert r.stderr.endswith("python: output limit reached\n")
+    assert len(r.stdout) < 2 * _SMALL.max_output
+
+
+def test_one_file_past_the_disk_cap(sb_small: Sandbox, tmp_path: Path) -> None:
+    t = time.monotonic()
+    r = sb_small.bash(
+        'python -c \'f = open("/scratch/big", "wb")\n'
+        'for _ in range(80): f.write(b"x" * 2**16)\''
+    )
+    assert time.monotonic() - t < 3
+    assert r.exit_code == 1 and "python: disk cap exceeded" in r.stderr
+    assert (tmp_path / "rw" / "big").stat().st_size <= _SMALL.max_disk
+
+
+def test_many_files_past_the_disk_cap(sb_small: Sandbox, tmp_path: Path) -> None:
+    t = time.monotonic()
+    r = sb_small.bash(
+        "python -c 'import time\n"
+        "for i in range(2000):\n"
+        '    open(f"/scratch/f{i}", "wb").write(b"x" * 10_000)\n'
+        "    time.sleep(0.001)\n"
+        'open("/scratch/done", "w")\''
+    )
+    assert time.monotonic() - t < 3
+    assert r.exit_code == 1 and "python: disk cap exceeded" in r.stderr
+    assert not (tmp_path / "rw" / "done").exists()
+
+
+# --- The cache ---------------------------------------------------------------
+
+
+def _link_or_copy(src: str, dst: str) -> None:
+    try:
+        os.link(src, dst)
+    except OSError:
+        shutil.copy2(src, dst)
+
+
+@pytest.fixture
+def linked_cache() -> Iterator[Path]:
+    """A copy of the prepared cache, of hard links where it can be."""
+    real = fetch.cache_dir()
+    work = Path(tempfile.mkdtemp(prefix="test-cache.", dir=real.parent))
+    try:
+        cache = work / "cache"
+        shutil.copytree(real, cache, copy_function=_link_or_copy)
+        yield cache
+    finally:
+        shutil.rmtree(work)
+
+
+@pytest.mark.parametrize("where", ["outer", "outer/cache/sub"])
+def test_writable_mount_over_the_cache_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, where: str
+) -> None:
+    monkeypatch.setenv("SPELAION_CACHE", str(tmp_path / "outer" / "cache"))
+    host = tmp_path / where
+    host.mkdir(parents=True)
+    with pytest.raises(ValueError, match="python cache"):
+        Sandbox([Mount("/w", host)], python=True)
+
+
+def test_readonly_mount_of_the_cache_allowed() -> None:
+    mounts = [Mount("/c", fetch.cache_dir(), readonly=True)]
+    with Sandbox(mounts, cwd="/c", python=True) as s:
+        assert s.bash("python -c 'print(1)'").stdout == "1\n"
+
+
+def test_child_never_builds(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, linked_cache: Path
+) -> None:
+    cache = linked_cache
+    monkeypatch.setenv("SPELAION_CACHE", str(cache))
+    (tmp_path / "w").mkdir()
+    with Sandbox([Mount("/w", tmp_path / "w")], cwd="/w", python=True) as s:
+        assert s.bash("python -c 'print(1)'").stdout == "1\n"
+        shutil.rmtree(cache / f"python-{fetch.PYTHON_WASI['version']}")
+        r = s.bash("python -c 'print(1)'")
+    assert r.exit_code == 127
+    assert r.stderr == (
+        "python: CPython for WASI is missing from the cache; "
+        "run spelaion fetch-python\n"
+    )
+    assert list(cache.iterdir()) == []
+
+
+def test_stale_work_folders_removed(
+    monkeypatch: pytest.MonkeyPatch, linked_cache: Path
+) -> None:
+    cache = linked_cache
+    monkeypatch.setenv("SPELAION_CACHE", str(cache))
+    folder = cache / f"python-{fetch.PYTHON_WASI['version']}"
+    old = [
+        cache / f"{folder.name}.abc",
+        folder / f"{fetch.site_name()}.abc",
+        cache / "python-3.14.9-wasi_sdk-24.zip.abc",
+    ]
+    fresh = cache / f"{folder.name}.new"
+    for p in [*old[:2], fresh]:
+        p.mkdir()
+    old[2].write_bytes(b"part")
+    hour_ago = time.time() - 3600
+    for p in old:
+        os.utime(p, (hour_ago, hour_ago))
+    assert fetch.ensure_python() == folder
+    assert [p.exists() for p in old] == [False, False, False]
+    assert fresh.is_dir() and (folder / fetch.site_name()).is_dir()
+
+
+def test_download_deadline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    fake = tmp_path / "python.zip"
+    fake.write_bytes(b"x" * 2**21)
+    cache = tmp_path / "cache"
+    monkeypatch.setenv("SPELAION_CACHE", str(cache))
+    monkeypatch.setitem(fetch.PYTHON_WASI, "url", fake.as_uri())
+    monkeypatch.setattr(fetch, "_DOWNLOAD_S", 0)
+    with pytest.raises(TimeoutError, match="download"):
+        fetch.ensure_python()
+    assert list(cache.iterdir()) == []

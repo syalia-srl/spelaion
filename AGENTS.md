@@ -69,7 +69,15 @@ own path; WASI gives it no sockets and no processes. Mounts at `/lib` or
   space peaks near 5 GB (`VmPeak`), mostly reservations, which `RLIMIT_AS`
   would refuse.
 - Time: the guest's epoch deadline is the call's deadline as the child sees
-  it, which is after the parent's and before the child's own timer.
+  it plus `PYTHON_LAG` (0.5 s), so the parent always reports the timeout and
+  restarts the child; the epoch and then the child's own timer only back it up.
+- Output and disk: while the guest runs, a watcher thread samples its output
+  files and `disk_used()` and stops it through the epoch past
+  `4 * max_output` bytes or the disk cap. The child's `RLIMIT_FSIZE` is
+  `max_disk`, so no single file passes the cap (EFBIG).
+- Only the parent builds the cache (`ensure_python`); a child that finds it
+  missing prints a message and exits 127. A writable mount may not hold or
+  lie inside the cache, which holds native code.
 
 ## Layout
 
