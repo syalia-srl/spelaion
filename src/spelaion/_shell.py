@@ -1,7 +1,6 @@
 """One sandbox call at a time over a MountFs: the shell, edit and write.
 
-The sandbox runs this in its own process for now; it is kept apart from
-:class:`~spelaion.sandbox.Sandbox` so a child process can run it instead.
+The sandbox's child process (:mod:`spelaion._child`) runs one of these.
 """
 
 from __future__ import annotations
@@ -37,6 +36,7 @@ class Shell:
         self.cwd = cwd
         self.env = env
         self.limits = limits
+        self.tools = ToolRegistry()
 
     def call(self, kind: str, payload: dict[str, Any]) -> Result:
         """Run one call (*kind* is ``bash``, ``edit`` or ``write``)."""
@@ -75,7 +75,7 @@ class Shell:
             executor = Executor(
                 state=state,
                 vfs=self.fs,
-                tools=ToolRegistry(),
+                tools=self.tools,
                 policy=PolicyEngine(config=PolicyConfig()),
             )
             exit_code = executor.execute_node(program, io).exit_code

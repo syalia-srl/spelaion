@@ -107,5 +107,24 @@ depends_on = [
 ]
 
 [[modules]]
+path = "spelaion._wire"
+depends_on = ["spelaion._types"]
+
+[[modules]]
+path = "spelaion._child"
+depends_on = [
+    "spelaion._shell",
+    "spelaion._types",
+    "spelaion._wire",
+    "spelaion.runtime",
+    "spelaion.vfs",
+]
+
+[[modules]]
 path = "spelaion.sandbox"
-depends_on = ["spelaion._shell", "spelaion._types", "spelaion.vfs"]
+depends_on = [
+    "spelaion._child",
+    "spelaion._types",
+    "spelaion._wire",
+    "spelaion.vfs",
+]
