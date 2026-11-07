@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
@@ -342,3 +343,55 @@ def test_truncate_notice_exact_copy() -> None:
 def test_truncate_one_long_line() -> None:
     t = truncate("x" * 100_000, 1_000)
     assert len(t) < 1_100 and "cut" in t
+
+
+# --- Text that is not Unicode, and internal errors ---------------------------
+
+
+def test_write_lone_surrogate(sb: Sandbox, rw: Path) -> None:
+    r = sb.write("/scratch/s", "a\ud800b")
+    assert r.exit_code == 1 and "content is not valid Unicode text" in r.stderr
+    assert not (rw / "s").exists()
+    r = sb.write("/scratch/\ud800", "x")
+    assert r.exit_code == 1 and "not valid Unicode text" in r.stderr
+    r.stderr.encode("utf-8")
+
+
+def test_edit_lone_surrogate(sb: Sandbox, rw: Path) -> None:
+    sb.write("/scratch/p", "abc")
+    r = sb.edit("/scratch/p", "b", "\ud800")
+    assert r.exit_code == 1 and "new text is not valid Unicode text" in r.stderr
+    assert (rw / "p").read_bytes() == b"abc"
+    r = sb.edit("/scratch/\ud800", "b", "c")
+    assert r.exit_code == 1 and "not valid Unicode text" in r.stderr
+    r.stderr.encode("utf-8")
+
+
+def test_bash_lone_surrogate(sb: Sandbox) -> None:
+    r = sb.bash("echo \ud800")
+    assert r.exit_code != 0 and "command is not valid Unicode text" in r.stderr
+
+
+def test_edit_refuses_non_utf8(sb: Sandbox, rw: Path) -> None:
+    data = b"\x89PNG\xff\xfe hello \xe9t\xe9\n"
+    (rw / "img").write_bytes(data)
+    r = sb.edit("/scratch/img", "hello", "bye")
+    assert r.exit_code == 1 and r.stderr == "edit: /scratch/img: not UTF-8 text\n"
+    assert (rw / "img").read_bytes() == data
+
+
+def test_internal_error_logged_not_returned(
+    sb: Sandbox, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def boom(*_: object) -> None:
+        raise OSError(2, "No such file or directory", "/host/secret/path")
+
+    monkeypatch.setattr("spelaion._shell.Executor.execute_node", boom)
+    with caplog.at_level(logging.ERROR, logger="spelaion"):
+        r = sb.bash("true")
+    assert r.exit_code == 1
+    assert r.stderr == (
+        "spelaion: internal error: FileNotFoundError: No such file or directory\n"
+    )
+    assert "Traceback" not in r.stderr
+    assert caplog.records and caplog.records[0].exc_info is not None
