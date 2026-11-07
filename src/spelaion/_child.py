@@ -34,6 +34,9 @@ BOOTSTRAP = (
 # the parent died mid-call and can no longer kill the child.
 GRACE = 5.0
 
+# Under TEST_HOOKS, replaces GRACE so a test can outlive the child's timer fast.
+TEST_GRACE = "SPELAION_TEST_GRACE"
+
 
 def serve(conn: Connection, args: bytes) -> None:
     """Unpickle the startup arguments from *args* and run :func:`main`."""
@@ -60,8 +63,10 @@ def main(
     shell = Shell(mounts, cwd, env, limits)
     for name in host_names:
         shell.tools.register(name, _HostProxy(name, conn, shell))
+    grace = GRACE
     if os.environ.get(TEST_HOOKS) == "1":
         shell.tools.register("kill_self_for_test", _KillSelf())
+        grace = float(os.environ.get(TEST_GRACE, GRACE))
     ready: Ready = ("ready",)
     conn.send(ready)
     while True:
@@ -71,7 +76,7 @@ def main(
             return
         if msg[0] != "call":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
-        signal.setitimer(signal.ITIMER_REAL, limits.timeout_s + GRACE)
+        signal.setitimer(signal.ITIMER_REAL, limits.timeout_s + grace)
         try:
             result = shell.call(msg[1], msg[2])
         except MemoryError:
