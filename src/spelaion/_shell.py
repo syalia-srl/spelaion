@@ -6,6 +6,7 @@ The sandbox runs this in its own process for now; it is kept apart from
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -22,6 +23,8 @@ from spelaion.tools.registry import ToolRegistry
 from spelaion.vfs.mounts import Mount, MountFs
 
 _CONTEXT_LINES = 3
+
+_log = logging.getLogger("spelaion")
 
 
 class Shell:
@@ -57,25 +60,31 @@ class Shell:
             state.set_var(name, value)
             state.export_var(name, value)
 
-        parsed = parse_script(command)
-        if parsed.has_errors:
-            return Result(stderr="spelaion: syntax error\n", exit_code=2)
-        program, _diags = normalize(parsed.root_node, command)
-
-        executor = Executor(
-            state=state,
-            vfs=self.fs,
-            tools=ToolRegistry(),
-            policy=PolicyEngine(config=PolicyConfig()),
-        )
+        try:
+            command.encode("utf-8")
+        except UnicodeError:
+            return Result(
+                stderr="spelaion: command is not valid Unicode text\n", exit_code=2
+            )
         io = IOContext()
         try:
+            parsed = parse_script(command)
+            if parsed.has_errors:
+                return Result(stderr="spelaion: syntax error\n", exit_code=2)
+            program, _diags = normalize(parsed.root_node, command)
+            executor = Executor(
+                state=state,
+                vfs=self.fs,
+                tools=ToolRegistry(),
+                policy=PolicyEngine(config=PolicyConfig()),
+            )
             exit_code = executor.execute_node(program, io).exit_code
         except SystemExit as e:
             exit_code = e.code if isinstance(e.code, int) else 0
         except Exception as e:
             # A command bug must come back as a result, not end the call.
-            io.stderr.write(f"spelaion: internal error: {type(e).__name__}: {e}\n")
+            _log.exception("internal error running a bash call")
+            io.stderr.write(f"spelaion: internal error: {_describe(e)}\n")
             exit_code = 1
         return Result(
             stdout=io.stdout.getvalue(),
@@ -86,9 +95,15 @@ class Shell:
     def write(self, path: str, content: str) -> Result:
         path = self.fs.resolve(path, self.cwd)
         try:
-            self.fs.write(path, content.encode("utf-8"))
+            data = content.encode("utf-8")
+        except UnicodeError:
+            return _not_unicode("write", "content")
+        try:
+            self.fs.write(path, data)
         except OSError as e:
             return _failed("write", path, e)
+        except UnicodeError:
+            return _not_unicode("write", "path")
         return Result()
 
     def edit(self, path: str, old: str, new: str) -> Result:
@@ -99,9 +114,13 @@ class Shell:
         try:
             # Refuse a read-only file before reading it.
             self.fs.host_path(path, write=True)
-            text = self.fs.read(path).decode("utf-8", errors="replace")
+            text = self.fs.read(path).decode("utf-8")
         except OSError as e:
             return _failed("edit", path, e)
+        except UnicodeDecodeError:
+            return Result(stderr=f"edit: {shown}: not UTF-8 text\n", exit_code=1)
+        except UnicodeError:
+            return _not_unicode("edit", "path")
         n = text.count(old)
         if n == 0:
             return Result(stderr=f"old text not found in {shown}\n", exit_code=1)
@@ -116,14 +135,32 @@ class Shell:
         start = text.index(old)
         updated = text[:start] + new + text[start + len(old) :]
         try:
-            self.fs.write(path, updated.encode("utf-8"))
+            data = updated.encode("utf-8")
+        except UnicodeError:
+            return _not_unicode("edit", "new text")
+        try:
+            self.fs.write(path, data)
         except OSError as e:
             return _failed("edit", path, e)
         return Result(stdout=_context(updated, start, len(new)))
 
 
 def _shown(path: str) -> str:
-    return path.replace("\0", "\\0")
+    # A host name that is not UTF-8 decodes to lone surrogates; escape them.
+    shown = path.replace("\0", "\\0")
+    return shown.encode("utf-8", "backslashreplace").decode("utf-8")
+
+
+def _not_unicode(cmd: str, what: str) -> Result:
+    return Result(stderr=f"{cmd}: {what} is not valid Unicode text\n", exit_code=1)
+
+
+def _describe(e: Exception) -> str:
+    # An OSError's str() may name a host path; its reason alone cannot.
+    if isinstance(e, OSError):
+        reason = e.strerror or (os.strerror(e.errno) if e.errno else "")
+        return f"{type(e).__name__}: {reason or 'Input/output error'}"
+    return f"{type(e).__name__}: {e}"
 
 
 def _failed(cmd: str, path: str, e: OSError) -> Result:
