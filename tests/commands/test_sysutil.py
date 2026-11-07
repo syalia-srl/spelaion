@@ -7,7 +7,7 @@ Covers:
 - sleep: returns immediately with exit 0
 - env: prints exported vars; -u removes a var
 - which: finds builtins, virtual commands, not found
-- date: default output, +FORMAT, $AGENTSH_DATE override
+- date: default output, +FORMAT, $SPELAION_DATE override
 - uname: default (-s), -a all, -r release, -m machine
 - whoami: prints $USER or "root"
 - id: prints uid/gid
@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentsh.commands.sysutil import (
+from spelaion.commands.sysutil import (
     cmd_comm,
     cmd_date,
     cmd_env,
@@ -33,9 +33,9 @@ from agentsh.commands.sysutil import (
     cmd_whoami,
     cmd_yes,
 )
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -359,19 +359,19 @@ class TestDate:
         parts = output.split("-")
         assert len(parts) == 3
 
-    def test_agentsh_date_override(self, vfs: VirtualFilesystem) -> None:
-        """$AGENTSH_DATE overrides the output."""
+    def test_spelaion_date_override(self, vfs: VirtualFilesystem) -> None:
+        """$SPELAION_DATE overrides the output."""
         state = ShellState()
-        state.set_var("AGENTSH_DATE", "2024-01-01")
+        state.set_var("SPELAION_DATE", "2024-01-01")
         io = IOContext()
         result = cmd_date([], state, vfs, io)
         assert result.exit_code == 0
         assert io.stdout.getvalue() == "2024-01-01\n"
 
-    def test_agentsh_date_overrides_format(self, vfs: VirtualFilesystem) -> None:
-        """When $AGENTSH_DATE is set, format arguments are ignored."""
+    def test_spelaion_date_overrides_format(self, vfs: VirtualFilesystem) -> None:
+        """When $SPELAION_DATE is set, format arguments are ignored."""
         state = ShellState()
-        state.set_var("AGENTSH_DATE", "fixed-date")
+        state.set_var("SPELAION_DATE", "fixed-date")
         io = IOContext()
         result = cmd_date(["+%Y"], state, vfs, io)
         assert result.exit_code == 0
@@ -406,7 +406,7 @@ class TestUname:
         assert result.exit_code == 0
         output = io.stdout.getvalue().strip()
         assert "VirtualOS" in output
-        assert "agentsh" in output
+        assert "spelaion" in output
         assert "1.0.0" in output
         assert "virtual" in output
 
@@ -426,7 +426,7 @@ class TestUname:
         io = IOContext()
         result = cmd_uname(["-n"], state, vfs, io)
         assert result.exit_code == 0
-        assert io.stdout.getvalue() == "agentsh\n"
+        assert io.stdout.getvalue() == "spelaion\n"
 
     def test_combined_flags(self, state: ShellState, vfs: VirtualFilesystem) -> None:
         """uname -s -m should print sysname and machine."""

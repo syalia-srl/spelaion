@@ -14,16 +14,16 @@ from io import StringIO
 
 import pytest
 
-from agentsh.ast.nodes import Redirection, Word
-from agentsh.ast.spans import Point, Span
-from agentsh.ast.words import LiteralSegment
-from agentsh.exec.pipelines import execute_pipeline
-from agentsh.exec.redirs import IOContext, VFSWriteBuffer, apply_redirections
-from agentsh.exec.tool_dispatch import dispatch_tool
-from agentsh.runtime.result import CommandResult
-from agentsh.runtime.state import ShellState
-from agentsh.tools.registry import ToolRegistry
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.ast.nodes import Redirection, Word
+from spelaion.ast.spans import Point, Span
+from spelaion.ast.words import LiteralSegment
+from spelaion.exec.pipelines import execute_pipeline
+from spelaion.exec.redirs import IOContext, VFSWriteBuffer, apply_redirections
+from spelaion.exec.tool_dispatch import dispatch_tool
+from spelaion.runtime.result import CommandResult
+from spelaion.runtime.state import ShellState
+from spelaion.tools.registry import ToolRegistry
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ---------------------------------------------------------------------------
 # Helpers

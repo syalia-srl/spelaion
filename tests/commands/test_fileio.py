@@ -1,7 +1,7 @@
 """Comprehensive tests for virtual file I/O and path utility commands.
 
-Covers all commands in agentsh.commands.fileio (cat, head, tail, tee,
-touch, mkdir, cp, mv, rm, ln) and agentsh.commands.pathutil (ls,
+Covers all commands in spelaion.commands.fileio (cat, head, tail, tee,
+touch, mkdir, cp, mv, rm, ln) and spelaion.commands.pathutil (ls,
 basename, dirname, realpath/readlink).
 """
 
@@ -11,7 +11,7 @@ from io import StringIO
 
 import pytest
 
-from agentsh.commands.fileio import (
+from spelaion.commands.fileio import (
     cmd_cat,
     cmd_cp,
     cmd_head,
@@ -23,15 +23,15 @@ from agentsh.commands.fileio import (
     cmd_tee,
     cmd_touch,
 )
-from agentsh.commands.pathutil import (
+from spelaion.commands.pathutil import (
     cmd_basename,
     cmd_dirname,
     cmd_ls,
     cmd_realpath,
 )
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ------------------------------------------------------------------
 # Fixtures

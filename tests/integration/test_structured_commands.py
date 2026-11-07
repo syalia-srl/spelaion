@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 # ==================================================================
 # jq — JSON processor

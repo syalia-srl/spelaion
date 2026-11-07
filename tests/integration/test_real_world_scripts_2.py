@@ -2,7 +2,7 @@
 
 These scripts exercise advanced bash features including associative arrays,
 BASH_REMATCH, complex parameter expansions, printf formatting, and more.
-Scripts have been adapted to work within agentsh engine limitations while
+Scripts have been adapted to work within spelaion engine limitations while
 still exercising the same problem-solving patterns.
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 FIXTURES = (
     Path(__file__).resolve().parent.parent.parent / "fixtures" / "real_world_scripts"

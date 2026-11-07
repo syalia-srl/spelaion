@@ -1,6 +1,6 @@
 """Integration tests for modern search commands: rg, fd, zip."""
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 # =========================================================================
 # rg (ripgrep)

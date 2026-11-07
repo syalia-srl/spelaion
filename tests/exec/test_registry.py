@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from agentsh.runtime.result import CommandResult
-from agentsh.tools.registry import AgentTool, ToolRegistry
+from spelaion.runtime.result import CommandResult
+from spelaion.tools.registry import AgentTool, ToolRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers

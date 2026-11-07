@@ -1,6 +1,6 @@
 """Tests for CST → AST normalization."""
 
-from agentsh.ast.nodes import (
+from spelaion.ast.nodes import (
     AndOrList,
     FunctionDef,
     Group,
@@ -10,15 +10,15 @@ from agentsh.ast.nodes import (
     SimpleCommand,
     Subshell,
 )
-from agentsh.ast.words import (
+from spelaion.ast.words import (
     CommandSubstitutionSegment,
     DoubleQuotedSegment,
     LiteralSegment,
     ParameterExpansionSegment,
     SingleQuotedSegment,
 )
-from agentsh.parser.frontend import parse_script
-from agentsh.parser.normalize import normalize
+from spelaion.parser.frontend import parse_script
+from spelaion.parser.normalize import normalize
 
 
 def _parse_and_normalize(script: str) -> Program:

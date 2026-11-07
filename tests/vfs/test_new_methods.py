@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ------------------------------------------------------------------
 # Fixtures

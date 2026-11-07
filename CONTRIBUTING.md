@@ -1,12 +1,12 @@
-# Contributing to agentsh
+# Contributing to spelaion
 
 Thank you for your interest in contributing! Here's how to get started.
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/mayflower/agentsh.git
-cd agentsh
+git clone https://github.com/syalia-srl/spelaion.git
+cd spelaion
 uv sync              # Install all dependencies
 uv run pytest -q     # Verify everything works
 ```
@@ -32,13 +32,12 @@ uv run pre-commit install        # One-time setup
 ## Project Structure
 
 ```
-src/agentsh/
+src/spelaion/
   api/          # Public API (Bash class, ShellEngine)
   ast/          # AST node types (leaf module, no dependencies)
   cli/          # CLI entry point
   commands/     # 111 virtual commands (cat, grep, sed, awk, ...)
   exec/         # Execution engine (split evaluators)
-  langchain_tools/  # LangChain tool wrappers
   parser/       # tree-sitter frontend + AST normalization
   policy/       # Allow/deny/warn policy engine
   runtime/      # ShellState, CommandResult, options
@@ -51,7 +50,7 @@ Module boundaries are enforced by [tach](https://github.com/gauge-sh/tach). Run 
 
 ## Adding a New Command
 
-1. Find the right module in `src/agentsh/commands/` (or create a new one)
+1. Find the right module in `src/spelaion/commands/` (or create a new one)
 2. Use the `@command("name")` decorator
 3. Follow the standard signature: `(args, state, vfs, io) -> CommandResult`
 4. Add tests in `tests/commands/`
@@ -60,8 +59,8 @@ Module boundaries are enforced by [tach](https://github.com/gauge-sh/tach). Run 
 Example:
 
 ```python
-from agentsh.commands._registry import command
-from agentsh.runtime.result import CommandResult
+from spelaion.commands._registry import command
+from spelaion.runtime.result import CommandResult
 
 @command("mycommand")
 def cmd_mycommand(args, state, vfs, io):
@@ -86,7 +85,7 @@ def cmd_mycommand(args, state, vfs, io):
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/mayflower/agentsh/issues). Please include:
+Use [GitHub Issues](https://github.com/syalia-srl/spelaion/issues). Please include:
 
 - What you expected to happen
 - What actually happened

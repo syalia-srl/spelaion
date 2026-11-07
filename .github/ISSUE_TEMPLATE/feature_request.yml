@@ -6,7 +6,7 @@ body:
     id: description
     attributes:
       label: Description
-      description: What would you like agentsh to support?
+      description: What would you like spelaion to support?
     validations:
       required: true
   - type: textarea

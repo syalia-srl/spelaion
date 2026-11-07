@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentsh.runtime.state import ShellState
+from spelaion.runtime.state import ShellState
 
 # ------------------------------------------------------------------
 # Fixtures

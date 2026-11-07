@@ -1,6 +1,6 @@
 """Tests for the tree-sitter parser frontend."""
 
-from agentsh.parser.frontend import parse_script
+from spelaion.parser.frontend import parse_script
 
 
 class TestParseScript:

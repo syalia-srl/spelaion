@@ -8,7 +8,7 @@ Phase 5: [[ ]] extended test
 Phase 6: Process substitution
 """
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 # =========================================================================
 # Phase 1: Parameter Expansion Operators

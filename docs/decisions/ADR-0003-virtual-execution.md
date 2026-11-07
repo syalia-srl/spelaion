@@ -4,13 +4,13 @@
 Accepted
 
 ## Context
-agentsh is designed as an execution engine for AI agents. Agents need predictable, inspectable, and safe command execution. Delegating to real process spawning introduces:
+spelaion is designed as an execution engine for AI agents. Agents need predictable, inspectable, and safe command execution. Delegating to real process spawning introduces:
 - Non-determinism from host environment differences.
 - Security risks from arbitrary command execution.
 - Opaque side effects that cannot be planned or rolled back.
 - Dependency on specific binaries being installed on the host.
 
-The core question: should agentsh execute commands by spawning real processes, or should it implement execution virtually?
+The core question: should spelaion execute commands by spawning real processes, or should it implement execution virtually?
 
 ## Decision
 All production execution is virtual. No `subprocess` calls, no real process spawning, no `shell=True` anywhere in the execution path.

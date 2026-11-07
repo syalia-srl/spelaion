@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Real Bash resolves commands in this order: aliases, functions, builtins, and then external binaries found via PATH. agentsh cannot safely support external binaries because virtual execution forbids subprocess calls (ADR-0003). We need a resolution strategy that is predictable, secure, and extensible.
+Real Bash resolves commands in this order: aliases, functions, builtins, and then external binaries found via PATH. spelaion cannot safely support external binaries because virtual execution forbids subprocess calls (ADR-0003). We need a resolution strategy that is predictable, secure, and extensible.
 
 ## Decision
 Command resolution follows a strict three-tier order:

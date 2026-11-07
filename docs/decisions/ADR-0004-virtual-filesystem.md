@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Shell scripts read and write files constantly. If agentsh accessed the real host filesystem, it would:
+Shell scripts read and write files constantly. If spelaion accessed the real host filesystem, it would:
 - Create side effects that are hard to predict, test, and undo.
 - Require sandboxing at the OS level to prevent damage.
 - Couple execution results to the host's filesystem state.

@@ -1,10 +1,10 @@
-"""Tests for agentsh.ast — node construction, span preservation, and composition."""
+"""Tests for spelaion.ast — node construction, span preservation, and composition."""
 
 from __future__ import annotations
 
 import pytest
 
-from agentsh.ast import (
+from spelaion.ast import (
     AndOrList,
     ArithmeticExpansionSegment,
     AssignmentWord,
@@ -32,7 +32,7 @@ from agentsh.ast import (
     WhileLoop,
     Word,
 )
-from agentsh.ast.nodes import ASTNode
+from spelaion.ast.nodes import ASTNode
 
 # ---------------------------------------------------------------------------
 # Helpers

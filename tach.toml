@@ -12,74 +12,70 @@ source_roots = [
 exact = true
 forbid_circular_dependencies = false
 
-# ── Leaf modules (no agentsh.* dependencies) ────────────────────────────
+# ── Leaf modules (no spelaion.* dependencies) ────────────────────────────
 
 [[modules]]
-path = "agentsh.ast"
+path = "spelaion.ast"
 depends_on = []
 
 [[modules]]
-path = "agentsh.vfs"
+path = "spelaion.vfs"
 depends_on = []
 
 [[modules]]
-path = "agentsh.runtime"
+path = "spelaion.runtime"
 depends_on = []
 
 [[modules]]
-path = "agentsh.policy"
+path = "spelaion.policy"
 depends_on = []
 
 # ── Core layers ─────────────────────────────────────────────────────────
 
 [[modules]]
-path = "agentsh.tools"
-depends_on = ["agentsh.runtime"]
+path = "spelaion.tools"
+depends_on = ["spelaion.runtime"]
 
 [[modules]]
-path = "agentsh.parser"
-depends_on = ["agentsh.ast"]
+path = "spelaion.parser"
+depends_on = ["spelaion.ast"]
 
 [[modules]]
-path = "agentsh.commands"
-depends_on = ["agentsh.exec", "agentsh.runtime", "agentsh.vfs"]
+path = "spelaion.commands"
+depends_on = ["spelaion.exec", "spelaion.runtime", "spelaion.vfs"]
 
 [[modules]]
-path = "agentsh.exec"
+path = "spelaion.exec"
 depends_on = [
-    "agentsh.ast",
-    "agentsh.commands",
-    "agentsh.parser",
-    "agentsh.runtime",
-    "agentsh.semantics",
+    "spelaion.ast",
+    "spelaion.commands",
+    "spelaion.parser",
+    "spelaion.runtime",
+    "spelaion.semantics",
 ]
 
 [[modules]]
-path = "agentsh.semantics"
+path = "spelaion.semantics"
 depends_on = [
-    "agentsh.ast",
-    "agentsh.commands",
-    "agentsh.exec",
+    "spelaion.ast",
+    "spelaion.commands",
+    "spelaion.exec",
 ]
 
 # ── Entry points ────────────────────────────────────────────────────────
 
 [[modules]]
-path = "agentsh.api"
+path = "spelaion.api"
 depends_on = [
-    "agentsh.exec",
-    "agentsh.parser",
-    "agentsh.policy",
-    "agentsh.runtime",
-    "agentsh.semantics",
-    "agentsh.tools",
-    "agentsh.vfs",
+    "spelaion.exec",
+    "spelaion.parser",
+    "spelaion.policy",
+    "spelaion.runtime",
+    "spelaion.semantics",
+    "spelaion.tools",
+    "spelaion.vfs",
 ]
 
 [[modules]]
-path = "agentsh.cli"
-depends_on = ["agentsh.api", "agentsh.langchain_tools"]
-
-[[modules]]
-path = "agentsh.langchain_tools"
-depends_on = ["agentsh.api", "agentsh.ast"]
+path = "spelaion.cli"
+depends_on = ["spelaion.api", "spelaion.ast"]
