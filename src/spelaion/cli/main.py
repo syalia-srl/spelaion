@@ -38,11 +38,22 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901
     run_parser = subparsers.add_parser("run", help="Execute a shell script")
     run_parser.add_argument("file", help="Script file to run (or - for stdin)")
 
+    subparsers.add_parser(
+        "fetch-python",
+        help="Download and prepare CPython for WASI for python in sandboxes",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command is None:
         parser.print_help()
         return 1
+
+    if args.command == "fetch-python":
+        from spelaion.python.fetch import ensure_python
+
+        print(ensure_python())
+        return 0
 
     # Read script
     script = _read_script(args.file)

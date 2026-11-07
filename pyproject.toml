@@ -25,6 +25,7 @@ classifiers = [
 dependencies = [
     "tree-sitter>=0.24.0",
     "tree-sitter-bash>=0.23.0",
+    "wasmtime>=50.0.1",
 ]
 
 [project.urls]
@@ -59,6 +60,9 @@ default-groups = ["dev"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--import-mode=importlib"
+markers = [
+    "wasi: needs the CPython for WASI build (downloaded once into the cache)",
+]
 
 # --------------------------------------------------------------------------
 # Ruff — linter AND formatter (replaces flake8, pylint, black, isort)
@@ -68,6 +72,8 @@ addopts = "--import-mode=importlib"
 target-version = "py311"
 line-length = 88
 src = ["src", "tests"]
+# Vendored third-party code, kept as released.
+extend-exclude = ["src/spelaion/python/vendor"]
 
 [tool.ruff.lint]
 select = [
@@ -110,7 +116,7 @@ typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
 include = ["src"]
-exclude = ["tests", "**/__pycache__"]
+exclude = ["tests", "**/__pycache__", "src/spelaion/python/vendor"]
 # Relaxations — only what's genuinely unfixable
 reportUnusedFunction = "warning"
 reportUnnecessaryComparison = "warning"

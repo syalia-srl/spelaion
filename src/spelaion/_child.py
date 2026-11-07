@@ -12,13 +12,21 @@ import os
 import pickle
 import resource
 import signal
+import time
 from multiprocessing.connection import Connection
+from typing import TYPE_CHECKING
 
 from spelaion._shell import OUT_OF_MEMORY, Shell
 from spelaion._types import Limits, Result
 from spelaion._wire import TEST_HOOKS, Done, Host, Ready, ToChild
+from spelaion.commands import python_cmd as python_cmds
 from spelaion.runtime.result import CommandResult
-from spelaion.vfs.mounts import Mount
+from spelaion.vfs.mounts import Mount, MountFs
+
+if TYPE_CHECKING:
+    from spelaion.exec.redirs import IOContext
+    from spelaion.runtime.state import ShellState
+    from spelaion.vfs.base import Filesystem
 
 # Runs before spelaion is importable: only the standard library.
 BOOTSTRAP = (
@@ -61,6 +69,9 @@ def main(
     # catastrophic regex), where a Python handler would never run.
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
     shell = Shell(mounts, cwd, env, limits)
+    python_cmd = _Python(limits.memory_mb) if python else None
+    if python_cmd is not None:
+        python_cmds.install(python_cmd)
     for name in host_names:
         shell.tools.register(name, _HostProxy(name, conn, shell))
     grace = GRACE
@@ -77,6 +88,9 @@ def main(
         if msg[0] != "call":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
         signal.setitimer(signal.ITIMER_REAL, limits.timeout_s + grace)
+        if python_cmd is not None:
+            # The parent's deadline as known here; the itimer fires later.
+            python_cmd.deadline = time.monotonic() + limits.timeout_s
         try:
             result = shell.call(msg[1], msg[2])
         except MemoryError:
@@ -84,6 +98,33 @@ def main(
         done: Done = ("done", result)
         conn.send(done)
         signal.setitimer(signal.ITIMER_REAL, 0)
+
+
+class _Python:
+    """``python`` and ``python3``: CPython for WASI over the shell's mounts."""
+
+    def __init__(self, memory_mb: int) -> None:
+        self.memory_mb = memory_mb
+        self.deadline = 0.0
+
+    def __call__(
+        self, args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
+    ) -> CommandResult:
+        from spelaion.python.runner import run_python
+
+        assert isinstance(vfs, MountFs)
+        out, err, code = run_python(
+            args,
+            stdin=io.stdin.read(),
+            cwd=state.cwd,
+            env=dict(state.exported_env),
+            fs=vfs,
+            deadline=self.deadline,
+            memory_mb=self.memory_mb,
+        )
+        io.stdout.write(out)
+        io.stderr.write(err)
+        return CommandResult(exit_code=code)
 
 
 class _HostProxy:

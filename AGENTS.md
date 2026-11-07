@@ -44,6 +44,33 @@ uv run pytest -q
 
 After adding an import between modules, `uv run tach sync` updates `tach.toml`.
 
+Tests marked `wasi` need CPython for WASI, which the first one downloads
+(about 14 MB) and prepares (about 70 MB) in the cache: `$SPELAION_CACHE`, else
+`$XDG_CACHE_HOME/spelaion`, else `~/.cache/spelaion`. CI caches that folder.
+`uv run pytest -m "not wasi"` skips them.
+
+## python
+
+`python` and `python3` run CPython for WASI under wasmtime, in the sandbox's
+child process (`src/spelaion/python/`). The guest sees `/lib` (the standard
+library) and `/site` (PyYAML and `_boot`) read-only, and each mount at its
+own path; WASI gives it no sockets and no processes. Mounts at `/lib` or
+`/site` are refused when `python=True`.
+
+- The cache folder is keyed on the build (`python-3.14.9/`), the compiled
+  module on the wasmtime version (`python.wasm.cwasm-X.Y.Z`) and `site-HASH/`
+  on its sources, so upgrading spelaion never runs files an older one left.
+- Memory: the guest's linear memory counts against the child's `RLIMIT_DATA`
+  (`memory_mb`), and no extra allowance is needed. Measured with wasmtime
+  50.0.1: the child holds about 50 MB of data with the engine and module
+  loaded; the largest `bytearray` that succeeds is 180 MB at `memory_mb=256`
+  and 940 MB at 1024. Past that the guest gets `MemoryError`, and the next
+  call works. Keep `RLIMIT_DATA`: with one instance the child's address
+  space peaks near 5 GB (`VmPeak`), mostly reservations, which `RLIMIT_AS`
+  would refuse.
+- Time: the guest's epoch deadline is the call's deadline as the child sees
+  it, which is after the parent's and before the child's own timer.
+
 ## Layout
 
 ```
@@ -55,6 +82,7 @@ src/spelaion/
   exec/       # evaluators
   parser/     # tree-sitter frontend + normalization
   policy/     # allow/deny/warn rules
+  python/     # python on CPython for WASI; vendor/ holds PyYAML as released
   runtime/    # ShellState, CommandResult
   semantics/  # resolution, expansion, planner
   tools/      # agent tool registry

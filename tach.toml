@@ -5,6 +5,7 @@
 exclude = [
     "**/__pycache__/**",
     "tests/**",
+    "src/spelaion/python/vendor/**",
 ]
 source_roots = [
     "src",
@@ -81,7 +82,7 @@ depends_on = [
 
 [[modules]]
 path = "spelaion.cli"
-depends_on = ["spelaion.api", "spelaion.ast"]
+depends_on = ["spelaion.api", "spelaion.ast", "spelaion.python"]
 
 # ── Sandbox ─────────────────────────────────────────────────────────────
 
@@ -111,11 +112,17 @@ path = "spelaion._wire"
 depends_on = ["spelaion._types"]
 
 [[modules]]
+path = "spelaion.python"
+depends_on = ["spelaion.vfs"]
+
+[[modules]]
 path = "spelaion._child"
 depends_on = [
     "spelaion._shell",
     "spelaion._types",
     "spelaion._wire",
+    "spelaion.commands",
+    "spelaion.python",
     "spelaion.runtime",
     "spelaion.vfs",
 ]
@@ -126,5 +133,6 @@ depends_on = [
     "spelaion._child",
     "spelaion._types",
     "spelaion._wire",
+    "spelaion.python",
     "spelaion.vfs",
 ]
