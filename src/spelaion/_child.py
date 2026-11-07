@@ -30,6 +30,10 @@ BOOTSTRAP = (
     "serve(conn, args)\n"
 )
 
+# The child's own deadline is the parent's plus this, so it only fires when
+# the parent died mid-call and can no longer kill the child.
+GRACE = 5.0
+
 
 def serve(conn: Connection, args: bytes) -> None:
     """Unpickle the startup arguments from *args* and run :func:`main`."""
@@ -50,6 +54,9 @@ def main(
     resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
     # Ctrl-C reaches the whole process group; the parent decides what stops.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    # SIGALRM's default action ends the process even inside a C loop (a
+    # catastrophic regex), where a Python handler would never run.
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
     shell = Shell(mounts, cwd, env, limits)
     for name in host_names:
         shell.tools.register(name, _HostProxy(name, conn, shell))
@@ -64,12 +71,14 @@ def main(
             return
         if msg[0] != "call":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
+        signal.setitimer(signal.ITIMER_REAL, limits.timeout_s + GRACE)
         try:
             result = shell.call(msg[1], msg[2])
         except MemoryError:
             result = Result(stderr=OUT_OF_MEMORY, exit_code=1)
         done: Done = ("done", result)
         conn.send(done)
+        signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 class _HostProxy:

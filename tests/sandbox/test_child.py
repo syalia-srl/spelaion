@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from spelaion import Limits, Mount, Result, Sandbox
+from spelaion._child import GRACE
 
 # The emulated awk has no loops and shell loops stop at an iteration limit;
 # a catastrophic regex is what runs forever.
@@ -194,6 +195,39 @@ def test_child_exits_when_parent_dies(tmp_path: Path) -> None:
         parent.kill()
         parent.wait()
     assert _gone(child)
+
+
+@pytest.mark.parametrize("sig", [signal.SIGKILL, signal.SIGTERM])
+def test_child_stops_when_parent_dies_mid_call(tmp_path: Path, sig: int) -> None:
+    script = _host_script(
+        tmp_path,
+        f"""
+        import os, threading, time
+        from spelaion import Limits, Mount, Sandbox
+        sb = Sandbox(
+            [Mount("/scratch", {str(tmp_path / "rw")!r})], limits=Limits(timeout_s=1)
+        )
+        threading.Thread(target=sb.bash, args=({RUNAWAY!r},), daemon=True).start()
+        while not sb._ready:
+            time.sleep(0.01)
+        time.sleep(0.2)
+        print(sb._child_pid, flush=True)
+        os.kill(os.getpid(), {int(sig)})
+        """,
+    )
+    parent = subprocess.Popen(
+        [sys.executable, str(script)], stdout=subprocess.PIPE, text=True
+    )
+    assert parent.stdout is not None
+    child = int(parent.stdout.readline())
+    try:
+        assert parent.wait(timeout=10) == -sig
+        assert _gone(child, within=1 + GRACE + 2)
+    finally:
+        if psutil_like_alive(child):
+            os.kill(child, signal.SIGKILL)
+        parent.kill()
+        parent.wait()
 
 
 def test_creation_time(tmp_path: Path) -> None:

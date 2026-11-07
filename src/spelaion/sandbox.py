@@ -212,7 +212,8 @@ class Sandbox:
         self._conn = conn
         self._ready = False
         # Also stops the child when the Sandbox is collected without close(),
-        # and at interpreter exit. A child whose parent dies gets EOF.
+        # and at interpreter exit. A child whose parent dies gets EOF, or its
+        # own timer ends it if the parent died mid-call.
         self._finalizer = weakref.finalize(
             self, _shut_down, self._closing, process, conn
         )
