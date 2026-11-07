@@ -158,26 +158,22 @@ def cmd_chmod(
             exit_code = 1
             continue
 
+        targets = [(f, node)]
+        if recursive and isinstance(node, DirNode):
+            for dirpath, dirnames, filenames in vfs.walk(f):
+                for name in dirnames + filenames:
+                    child_path = dirpath.rstrip("/") + "/" + name
+                    child = vfs.get_node(child_path)
+                    if child is not None:
+                        targets.append((child_path, child))
         try:
-            if _is_octal(mode_str):
-                new_mode = int(mode_str, 8)
-
-                def _set_octal(n: _NodeT, m: int = new_mode) -> None:
-                    n.mode = m
-
-                if recursive and isinstance(node, DirNode):
-                    _apply_recursive(f, vfs, _set_octal)
+            for path, n in targets:
+                if _is_octal(mode_str):
+                    new_mode = int(mode_str, 8)
                 else:
-                    _set_octal(node)
-            else:
-
-                def _set_sym(n: _NodeT, spec: str = mode_str) -> None:
-                    n.mode = _parse_symbolic_mode(spec, n.mode)
-
-                if recursive and isinstance(node, DirNode):
-                    _apply_recursive(f, vfs, _set_sym)
-                else:
-                    _set_sym(node)
+                    new_mode = _parse_symbolic_mode(mode_str, n.mode)
+                # The filesystem applies it: a MountFs node is a fresh copy.
+                vfs.chmod(path, new_mode)
         except ValueError as e:
             io.stderr.write(f"chmod: {e}\n")
             exit_code = 1
@@ -597,7 +593,7 @@ def cmd_shred(
             continue
 
         # Overwrite with zeros
-        node.content = b"\x00" * len(node.content)
+        vfs.write(abs_path, b"\x00" * len(node.content))
 
         if remove:
             with contextlib.suppress(FileNotFoundError, IsADirectoryError):

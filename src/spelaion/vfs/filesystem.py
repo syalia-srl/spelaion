@@ -264,6 +264,13 @@ class VirtualFilesystem:
 
         del src_parent.children[src_name]
 
+    def chmod(self, path: str, mode: int) -> None:
+        """Set the mode of the node at *path*."""
+        node = self.get_node(path)
+        if node is None:
+            raise FileNotFoundError(f"No such file or directory: {path!r}")
+        node.mode = mode
+
     def copy_file(self, src: str, dst: str) -> None:
         """Copy a file from *src* to *dst*.
 
