@@ -67,8 +67,15 @@ def _span(node: Node) -> Span:
     )
 
 
+def _byte_slice(source: str, start: int, end: int) -> str:
+    """Slice *source* by tree-sitter's UTF-8 byte offsets."""
+    if source.isascii():
+        return source[start:end]
+    return source.encode("utf-8")[start:end].decode("utf-8")
+
+
 def _node_text(node: Node, source: str) -> str:
-    return source[node.start_byte : node.end_byte]
+    return _byte_slice(source, node.start_byte, node.end_byte)
 
 
 def _named_children(node: Node) -> list[Node]:
@@ -1071,7 +1078,7 @@ def _extract_double_quoted(node: Node, source: str) -> list[WordSegment]:
     for child in node.children:
         # Capture any gap text between the previous child and this one.
         if child.start_byte > cursor:
-            gap = source[cursor : child.start_byte]
+            gap = _byte_slice(source, cursor, child.start_byte)
             # Skip the opening/closing quote characters themselves.
             if gap and gap != '"':
                 inner_segments.append(LiteralSegment(value=gap))

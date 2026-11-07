@@ -49,7 +49,9 @@ def _collect_errors(node: Node, source: str) -> list[Diagnostic]:
 def _walk_errors(node: Node, source: str, diagnostics: list[Diagnostic]) -> None:
     if node.type == "ERROR":
         span = _span_from_node(node)
-        text = source[span.start_byte : span.end_byte]
+        text = source.encode("utf-8")[span.start_byte : span.end_byte].decode(
+            "utf-8", errors="replace"
+        )
         msg = f"Syntax error near: {text!r}" if text else "Syntax error"
         diagnostics.append(
             Diagnostic(
