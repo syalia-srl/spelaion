@@ -6,6 +6,7 @@ not yet fully supported (associative arrays, read -ra, printf %-, etc.),
 so assertions are calibrated to the engine's *current* behaviour.
 """
 
+import datetime
 from pathlib import Path
 
 from spelaion.api.engine import ShellEngine
@@ -80,7 +81,7 @@ class TestRealWorldScripts1:
         assert "Bump type:" in result.stdout
         assert "New version:" in result.stdout
         # Date from the engine's date builtin
-        assert "2026-03-23" in result.stdout
+        assert datetime.date.today().isoformat() in result.stdout
         assert "Total commits:" in result.stdout
         assert "2.14.7" in result.stdout
 
