@@ -160,6 +160,15 @@ def test_write_creates_parents_inside_mount(fs: MountFs, rw: Path) -> None:
     assert (rw / "a" / "b" / "c.txt").read_bytes() == b"hi"
 
 
+def test_write_stops_at_deleted_mount_root(fs: MountFs, rw: Path) -> None:
+    rw.rmdir()
+    with pytest.raises(FileNotFoundError):
+        fs.write("/scratch/a/b.txt", b"hi")
+    with pytest.raises(FileNotFoundError):
+        fs.mkdir("/scratch/a", parents=True)
+    assert not rw.exists()
+
+
 def test_strict_prefix_of_mount_is_synthetic_dir(ro: Path, rw: Path) -> None:
     fs = MountFs([Mount("/work/project", ro), Mount("/work/scratch", rw)])
     assert fs.is_dir("/work")

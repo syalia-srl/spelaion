@@ -108,8 +108,9 @@ class MountFs:
         1. Normalise lexically, so ``..`` cannot climb above ``/``.
         2. Take the longest mount point that prefixes it (``ENOENT`` if none).
         3. Follow symlinks and refuse a result outside the mount (``EACCES``).
-        4. For a write, refuse a read-only mount (``EROFS``) and a full
-           disk (``EDQUOT``).
+        4. For a write, refuse a mount whose host folder is gone (``ENOENT``),
+           so creating parents never recreates it, a read-only mount
+           (``EROFS``) and a full disk (``EDQUOT``).
         """
         _check_name(path)
         path = _normalize(path)
@@ -121,6 +122,8 @@ class MountFs:
         if not host.is_relative_to(mount.host):
             raise _error(errno.EACCES, path)
         if write:
+            if not mount.host.is_dir():
+                raise _error(errno.ENOENT, path)
             if mount.readonly:
                 raise _error(errno.EROFS, path)
             if self._max_disk is not None and self.disk_used() > self._max_disk:
