@@ -10,6 +10,9 @@ source_roots = [
     "src",
 ]
 exact = true
+# Without this, tach reads .gitignore files above the repo, and a checkout
+# nested in an ignored folder hides src from it.
+respect_gitignore = false
 forbid_circular_dependencies = false
 
 # ── Leaf modules (no spelaion.* dependencies) ────────────────────────────
