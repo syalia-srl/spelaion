@@ -146,12 +146,16 @@ class Sandbox:
                 served = True
                 reply: HostResult = ("host_result", self._host(*msg[1:]))
                 self._conn.send(reply)
+        # Past the deadline, a dead child is a timeout: its own timer
+        # (timeout_s + GRACE) ends it while a slow host command runs here.
         except EOFError:
-            return self._died()
+            if time.monotonic() < deadline:
+                return self._died()
         except OSError:
-            if not served:
-                raise
-            return self._died()
+            if time.monotonic() < deadline:
+                if not served:
+                    raise
+                return self._died()
         self._restart()
         return Result(
             stderr=f"spelaion: timed out after {timeout:g}s\n",

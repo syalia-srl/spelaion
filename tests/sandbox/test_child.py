@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from spelaion import Limits, Mount, Result, Sandbox
-from spelaion._child import GRACE
+from spelaion._child import GRACE, TEST_GRACE
 
 # The emulated awk has no loops and shell loops stop at an iteration limit;
 # a catastrophic regex is what runs forever.
@@ -316,3 +316,30 @@ def test_errors_still_raise_at_construction(tmp_path: Path) -> None:
         Sandbox([Mount("/x", tmp_path / "missing")])
     with pytest.raises(ValueError):
         Sandbox([Mount("/x", tmp_path)], cwd="/nope")
+
+
+def test_slow_host_command_times_out(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The child's own timer ends it while the parent still serves the host
+    # command; the parent's reply then hits a closed socket. That is still
+    # this call's deadline, not a crash.
+    grace = 0.2
+    monkeypatch.setenv(TEST_GRACE, str(grace))
+    with _make(tmp_path, Limits(timeout_s=0.5)) as s:
+
+        def slow(
+            name: str, args: list[str], stdin: str, cwd: str, env: dict[str, str]
+        ) -> Result:
+            time.sleep(0.5 + grace + 1)
+            return Result(stdout="late\n")
+
+        s._serve_host = slow  # pyright: ignore[reportPrivateUsage]
+        s._host_names = {"slow"}  # pyright: ignore[reportPrivateUsage]
+        s._restart()  # pyright: ignore[reportPrivateUsage]
+        pid = s._child_pid  # pyright: ignore[reportPrivateUsage]
+        r = s.bash("slow")
+        assert (r.exit_code, r.timed_out) == (124, True)
+        assert r.stderr == "spelaion: timed out after 0.5s\n"
+        assert not psutil_like_alive(pid)
+        assert s.bash("echo ok").stdout == "ok\n"
