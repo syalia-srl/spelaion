@@ -118,6 +118,18 @@ def test_write_does_not_recreate_deleted_mount(sb: Sandbox, rw: Path) -> None:
 # --- Construction -----------------------------------------------------------
 
 
+@pytest.mark.parametrize("cwd", ["scratch", "/nowhere", "/scratch/f", "/project/x"])
+def test_bad_cwd_rejected(ro: Path, rw: Path, cwd: str) -> None:
+    (rw / "f").write_text("x")
+    with pytest.raises(ValueError, match="cwd"):
+        Sandbox([Mount("/project", ro, readonly=True), Mount("/scratch", rw)], cwd=cwd)
+
+
+def test_cwd_may_be_a_synthetic_folder(ro: Path, rw: Path) -> None:
+    with Sandbox([Mount("/work/a", ro), Mount("/work/b", rw)], cwd="/work") as s:
+        assert s.bash("pwd").stdout == "/work\n"
+
+
 def test_missing_mount_folder_message_names_sandbox_path(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="/x"):
         Sandbox([Mount("/x", tmp_path / "nope")])

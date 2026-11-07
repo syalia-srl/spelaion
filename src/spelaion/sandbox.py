@@ -32,6 +32,8 @@ class Sandbox:
         self.limits = limits
         self.python = python
         self._shell = Shell(list(mounts), cwd, dict(env or {}), limits)
+        if not cwd.startswith("/") or not self._shell.fs.is_dir(cwd):
+            raise ValueError(f"cwd {cwd} is not an absolute path to a folder")
 
     def bash(self, command: str) -> Result:
         """Run *command* in a fresh shell."""
