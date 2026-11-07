@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
-from spelaion.commands._io import read_text_inputs
+from spelaion.commands._io import read_text, read_text_inputs
 from spelaion.commands._registry import command
 from spelaion.runtime.result import CommandResult
 
@@ -138,21 +138,39 @@ def cmd_wc(
     if not (show_lines or show_words or show_bytes):
         show_lines = show_words = show_bytes = True
 
-    text, exit_code = read_text_inputs(files, state, vfs, io, "wc")
-    lines = text.splitlines()
-    nlines = len(lines)
-    nwords = len(text.split())
-    nbytes = len(text.encode("utf-8"))
+    def counts(text: str) -> list[int]:
+        out: list[int] = []
+        if show_lines:
+            out.append(len(text.splitlines()))
+        if show_words:
+            out.append(len(text.split()))
+        if show_bytes:
+            out.append(len(text.encode("utf-8")))
+        return out
 
-    parts: list[str] = []
-    if show_lines:
-        parts.append(str(nlines))
-    if show_words:
-        parts.append(str(nwords))
-    if show_bytes:
-        parts.append(str(nbytes))
+    if len(files) < 2:
+        text, exit_code = read_text_inputs(files, state, vfs, io, "wc")
+        io.stdout.write(" ".join(map(str, counts(text))) + "\n")
+        return CommandResult(exit_code=exit_code)
 
-    io.stdout.write(" ".join(parts) + "\n")
+    # Several files: one line each, then a total, padded to one width as GNU does.
+    rows: list[tuple[list[int], str]] = []
+    exit_code = 0
+    for f in files:
+        content = read_text(f, state, vfs, io, "wc")
+        if content is None:
+            exit_code = 1
+        else:
+            rows.append((counts(content), f))
+    total = (
+        [sum(col) for col in zip(*(r[0] for r in rows), strict=True)]
+        if rows
+        else counts("")
+    )
+    rows.append((total, "total"))
+    width = max(len(str(c)) for r in rows for c in r[0])
+    for nums, name in rows:
+        io.stdout.write(" ".join(str(c).rjust(width) for c in nums) + f" {name}\n")
     return CommandResult(exit_code=exit_code)
 
 

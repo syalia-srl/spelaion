@@ -104,6 +104,9 @@ def cmd_tail(
             else:
                 n = int(val)
             i += 2
+        elif args[i].startswith("-") and args[i][1:].isdigit():
+            n = int(args[i][1:])
+            i += 1
         else:
             files.append(args[i])
             i += 1
