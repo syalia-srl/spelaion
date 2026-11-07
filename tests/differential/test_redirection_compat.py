@@ -1,6 +1,6 @@
 """Differential tests for redirections and control flow.
 
-Compares agentsh output against real Bash.
+Compares spelaion output against real Bash.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import subprocess
 
 import pytest
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 BASH = shutil.which("bash")
 pytestmark = pytest.mark.skipif(BASH is None, reason="bash not found")
@@ -27,18 +27,18 @@ def _run_bash(script: str) -> tuple[str, int]:
     return result.stdout, result.returncode
 
 
-def _run_agentsh(script: str) -> tuple[str, int]:
+def _run_spelaion(script: str) -> tuple[str, int]:
     engine = ShellEngine()
     result = engine.run(script)
     return result.stdout, result.result.exit_code
 
 
 def _assert_match(script: str) -> None:
-    agentsh_stdout, agentsh_exit = _run_agentsh(script)
+    spelaion_stdout, spelaion_exit = _run_spelaion(script)
     bash_stdout, bash_exit = _run_bash(script)
-    assert agentsh_stdout == bash_stdout and agentsh_exit == bash_exit, (
+    assert spelaion_stdout == bash_stdout and spelaion_exit == bash_exit, (
         f"Mismatch for: {script!r}\n"
-        f"  agentsh: {agentsh_stdout!r} (exit {agentsh_exit})\n"
+        f"  spelaion: {spelaion_stdout!r} (exit {spelaion_exit})\n"
         f"  bash:    {bash_stdout!r} (exit {bash_exit})"
     )
 

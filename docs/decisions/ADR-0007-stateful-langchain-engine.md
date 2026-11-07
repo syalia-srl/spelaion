@@ -4,15 +4,15 @@
 Accepted
 
 ## Context
-agentsh provides three LangChain tools: `parse`, `plan`, and `run`. When an LLM agent uses these tools in a conversation, it typically builds up state incrementally -- setting variables, creating files, defining functions -- across multiple tool calls.
+spelaion provides three LangChain tools: `parse`, `plan`, and `run`. When an LLM agent uses these tools in a conversation, it typically builds up state incrementally -- setting variables, creating files, defining functions -- across multiple tool calls.
 
 If each tool call created a fresh engine, all state would be lost between calls, making multi-step shell workflows impossible. Conversely, if tools were fully independent, the agent would need to replay all setup commands on every invocation.
 
 ## Decision
-The `create_agentsh_tools()` factory creates a single `ShellEngine` instance and passes it to all three tools. Variables, VFS contents, function definitions, cwd, and exit status persist across tool calls within the same engine.
+The `create_spelaion_tools()` factory creates a single `ShellEngine` instance and passes it to all three tools. Variables, VFS contents, function definitions, cwd, and exit status persist across tool calls within the same engine.
 
 ```python
-parse_tool, plan_tool, run_tool = create_agentsh_tools(
+parse_tool, plan_tool, run_tool = create_spelaion_tools(
     initial_files={"/config.sh": "export DB=prod"},
     initial_vars={"USER": "agent"},
 )

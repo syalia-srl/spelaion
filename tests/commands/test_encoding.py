@@ -19,18 +19,18 @@ from io import StringIO
 
 import pytest
 
-from agentsh.commands.diff_cmd import cmd_diff
-from agentsh.commands.encoding import (
+from spelaion.commands.diff_cmd import cmd_diff
+from spelaion.commands.encoding import (
     cmd_base64,
     cmd_hexdump,
     cmd_md5sum,
     cmd_sha256sum,
     cmd_strings,
 )
-from agentsh.commands.math_cmd import cmd_bc, cmd_expr
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.commands.math_cmd import cmd_bc, cmd_expr
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

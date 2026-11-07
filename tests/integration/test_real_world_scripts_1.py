@@ -8,7 +8,7 @@ so assertions are calibrated to the engine's *current* behaviour.
 
 from pathlib import Path
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 _SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "real_world_scripts"
 

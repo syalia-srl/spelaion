@@ -13,7 +13,7 @@ We need a stable intermediate representation that:
 - Carries source spans for diagnostics.
 
 ## Decision
-Define a project-owned AST as Python dataclasses in `agentsh.ast.nodes` and `agentsh.ast.words`. The normalization pass in `agentsh.parser.normalize` converts tree-sitter CST nodes into these typed AST nodes. No tree-sitter node objects are stored in or leak through the AST layer.
+Define a project-owned AST as Python dataclasses in `spelaion.ast.nodes` and `spelaion.ast.words`. The normalization pass in `spelaion.parser.normalize` converts tree-sitter CST nodes into these typed AST nodes. No tree-sitter node objects are stored in or leak through the AST layer.
 
 Key design choices:
 - Every AST node carries a `SourceSpan` with byte offsets and row/column positions.

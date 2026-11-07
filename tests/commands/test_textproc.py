@@ -6,7 +6,7 @@ from io import StringIO
 
 import pytest
 
-from agentsh.commands.textproc import (
+from spelaion.commands.textproc import (
     cmd_cut,
     cmd_nl,
     cmd_paste,
@@ -16,9 +16,9 @@ from agentsh.commands.textproc import (
     cmd_uniq,
     cmd_wc,
 )
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ---------------------------------------------------------------------------
 # Fixtures

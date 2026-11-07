@@ -1,8 +1,8 @@
 """Tests for the expansion engine."""
 
-from agentsh.ast.nodes import Word
-from agentsh.ast.spans import Point, Span
-from agentsh.ast.words import (
+from spelaion.ast.nodes import Word
+from spelaion.ast.spans import Point, Span
+from spelaion.ast.words import (
     ArithmeticExpansionSegment,
     CommandSubstitutionSegment,
     DoubleQuotedSegment,
@@ -11,9 +11,9 @@ from agentsh.ast.words import (
     ParameterExpansionSegment,
     SingleQuotedSegment,
 )
-from agentsh.runtime.state import ShellState
-from agentsh.semantics.expand import expand_word, expand_word_single
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.runtime.state import ShellState
+from spelaion.semantics.expand import expand_word, expand_word_single
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 _SPAN = Span(0, 0, Point(0, 0), Point(0, 0))
 

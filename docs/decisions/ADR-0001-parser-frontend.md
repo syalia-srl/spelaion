@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-agentsh needs to parse a practical subset of Bash syntax reliably. Writing a custom recursive-descent parser for Bash is error-prone and expensive -- Bash grammar is large, context-sensitive, and full of edge cases. We need a parser that handles error recovery gracefully so agents can inspect partially valid scripts.
+spelaion needs to parse a practical subset of Bash syntax reliably. Writing a custom recursive-descent parser for Bash is error-prone and expensive -- Bash grammar is large, context-sensitive, and full of edge cases. We need a parser that handles error recovery gracefully so agents can inspect partially valid scripts.
 
 The main candidates were:
 1. Custom recursive-descent parser in Python

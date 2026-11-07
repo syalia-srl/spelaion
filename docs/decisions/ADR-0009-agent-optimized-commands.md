@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 
-AI coding agents (Claude Code, Codex CLI, Aider, SWE-agent, OpenHands) rely heavily on a small set of modern CLI tools that agentsh did not support. Research into agent tool-use patterns identified `rg` (ripgrep) as the #1 most-called tool, followed by `jq` for structured data processing and `patch` for diff-apply workflows.
+AI coding agents (Claude Code, Codex CLI, Aider, SWE-agent, OpenHands) rely heavily on a small set of modern CLI tools that spelaion did not support. Research into agent tool-use patterns identified `rg` (ripgrep) as the #1 most-called tool, followed by `jq` for structured data processing and `patch` for diff-apply workflows.
 
 The question was which tools to implement as virtual commands versus leaving as agent-tool delegates. The criteria: tools that operate purely on text/VFS data are feasible; tools requiring network, real processes, or language runtimes are not.
 

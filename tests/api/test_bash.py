@@ -1,4 +1,4 @@
-"""Comprehensive tests for the Bash class API (agentsh.api.bash).
+"""Comprehensive tests for the Bash class API (spelaion.api.bash).
 
 Covers:
 - Basic usage (echo, file persistence, variable/function persistence)
@@ -13,7 +13,7 @@ Covers:
 
 from __future__ import annotations
 
-from agentsh import Bash, CommandContext, RunResult, define_command
+from spelaion import Bash, CommandContext, RunResult, define_command
 
 # =========================================================================
 # Basic usage

@@ -6,10 +6,10 @@ from io import StringIO
 
 import pytest
 
-from agentsh.commands.stream import cmd_awk, cmd_sed
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.commands.stream import cmd_awk, cmd_sed
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ------------------------------------------------------------------
 # Fixtures

@@ -1,6 +1,6 @@
 """Additional integration tests for trivial.py and modern_search.py."""
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 # ===========================================================================
 # trivial.py coverage tests

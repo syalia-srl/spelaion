@@ -1,4 +1,4 @@
-"""Differential tests comparing agentsh against real Bash.
+"""Differential tests comparing spelaion against real Bash.
 
 Compares stdout + exit_code for the officially supported subset.
 FS side effects are excluded from comparison.
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 # Skip all if bash not available
 BASH = shutil.which("bash")
@@ -26,8 +26,8 @@ pytestmark = pytest.mark.skipif(BASH is None, reason="bash not found")
 @dataclass
 class DiffResult:
     script: str
-    agentsh_stdout: str
-    agentsh_exit: int
+    spelaion_stdout: str
+    spelaion_exit: int
     bash_stdout: str
     bash_exit: int
     match: bool
@@ -45,21 +45,21 @@ def _run_bash(script: str) -> tuple[str, int]:
     return result.stdout, result.returncode
 
 
-def _run_agentsh(script: str) -> tuple[str, int]:
-    """Run a script in agentsh and return (stdout, exit_code)."""
+def _run_spelaion(script: str) -> tuple[str, int]:
+    """Run a script in spelaion and return (stdout, exit_code)."""
     engine = ShellEngine()
     result = engine.run(script)
     return result.stdout, result.result.exit_code
 
 
 def _compare(script: str) -> DiffResult:
-    agentsh_stdout, agentsh_exit = _run_agentsh(script)
+    spelaion_stdout, spelaion_exit = _run_spelaion(script)
     bash_stdout, bash_exit = _run_bash(script)
-    match = agentsh_stdout == bash_stdout and agentsh_exit == bash_exit
+    match = spelaion_stdout == bash_stdout and spelaion_exit == bash_exit
     return DiffResult(
         script=script,
-        agentsh_stdout=agentsh_stdout,
-        agentsh_exit=agentsh_exit,
+        spelaion_stdout=spelaion_stdout,
+        spelaion_exit=spelaion_exit,
         bash_stdout=bash_stdout,
         bash_exit=bash_exit,
         match=match,
@@ -67,11 +67,11 @@ def _compare(script: str) -> DiffResult:
 
 
 def _assert_match(r: DiffResult) -> None:
-    """Assert that agentsh and bash outputs match."""
+    """Assert that spelaion and bash outputs match."""
     assert r.match, (
         f"Mismatch for: {r.script!r}\n"
-        f"  agentsh: {r.agentsh_stdout!r} "
-        f"(exit {r.agentsh_exit})\n"
+        f"  spelaion: {r.spelaion_stdout!r} "
+        f"(exit {r.spelaion_exit})\n"
         f"  bash:    {r.bash_stdout!r} "
         f"(exit {r.bash_exit})"
     )
@@ -233,7 +233,7 @@ TILDE_FIXTURES = [
 def test_tilde_compat(script: str) -> None:
     # Tilde expands differently per environment, just check exit code
     r = _compare(script)
-    assert r.agentsh_exit == r.bash_exit
+    assert r.spelaion_exit == r.bash_exit
 
 
 # --- Fixtures: Command Substitution ---
@@ -639,9 +639,9 @@ def test_compatibility_report(tmp_path: Path) -> None:
                 {
                     "script": r.script,
                     "match": r.match,
-                    "agentsh_stdout": r.agentsh_stdout,
+                    "spelaion_stdout": r.spelaion_stdout,
                     "bash_stdout": r.bash_stdout,
-                    "agentsh_exit": r.agentsh_exit,
+                    "spelaion_exit": r.spelaion_exit,
                     "bash_exit": r.bash_exit,
                 }
             )

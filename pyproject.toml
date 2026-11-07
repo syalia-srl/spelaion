@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentsh"
+name = "spelaion"
 version = "0.1.0"
-description = "A virtual Bash environment for AI agents — pure Python, pure in-memory"
+description = "A bash for agents, run from Python, with nothing real behind it"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
-authors = [{name = "Mayflower GmbH"}]
-keywords = ["bash", "shell", "virtual", "ai", "agent", "langchain", "sandbox"]
+authors = [{name = "Syalia S.R.L."}]
+keywords = ["bash", "shell", "virtual", "ai", "agent", "sandbox"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -25,13 +25,12 @@ classifiers = [
 dependencies = [
     "tree-sitter>=0.24.0",
     "tree-sitter-bash>=0.23.0",
-    "langchain-core>=0.3.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/mayflower/agentsh"
-Repository = "https://github.com/mayflower/agentsh"
-Issues = "https://github.com/mayflower/agentsh/issues"
+Homepage = "https://github.com/syalia-srl/spelaion"
+Repository = "https://github.com/syalia-srl/spelaion"
+Issues = "https://github.com/syalia-srl/spelaion/issues"
 
 [dependency-groups]
 dev = [
@@ -44,10 +43,10 @@ dev = [
 ]
 
 [project.scripts]
-agentsh = "agentsh.cli.main:main"
+spelaion = "spelaion.cli.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentsh"]
+packages = ["src/spelaion"]
 
 [tool.uv]
 default-groups = ["dev"]
@@ -113,7 +112,6 @@ venv = ".venv"
 include = ["src"]
 exclude = ["tests", "**/__pycache__"]
 # Relaxations — only what's genuinely unfixable
-reportIncompatibleVariableOverride = false  # LangChain SDK args_schema override
 reportUnusedFunction = "warning"
 reportUnnecessaryComparison = "warning"
 reportMissingTypeArgument = "warning"

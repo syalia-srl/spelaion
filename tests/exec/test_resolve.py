@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import pytest
 
-from agentsh.ast.nodes import FunctionDef, Group, SimpleCommand
-from agentsh.ast.spans import Point, Span
-from agentsh.runtime.result import CommandResult
-from agentsh.runtime.state import ShellState
-from agentsh.semantics.resolve import BUILTIN_NAMES, ResolvedCommand, resolve_command
-from agentsh.tools.registry import ToolRegistry
+from spelaion.ast.nodes import FunctionDef, Group, SimpleCommand
+from spelaion.ast.spans import Point, Span
+from spelaion.runtime.result import CommandResult
+from spelaion.runtime.state import ShellState
+from spelaion.semantics.resolve import BUILTIN_NAMES, ResolvedCommand, resolve_command
+from spelaion.tools.registry import ToolRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers

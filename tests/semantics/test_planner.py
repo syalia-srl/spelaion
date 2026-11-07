@@ -1,7 +1,7 @@
 """Tests for the planner / dry-run mode."""
 
-from agentsh.api.engine import ShellEngine
-from agentsh.policy.rules import PolicyConfig, PolicyRule
+from spelaion.api.engine import ShellEngine
+from spelaion.policy.rules import PolicyConfig, PolicyRule
 
 
 class TestPlanner:

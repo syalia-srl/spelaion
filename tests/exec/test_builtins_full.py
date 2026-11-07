@@ -11,7 +11,7 @@ from io import StringIO
 
 import pytest
 
-from agentsh.exec.builtins import (
+from spelaion.exec.builtins import (
     ReturnSignal,
     builtin_declare,
     builtin_echo,
@@ -25,9 +25,9 @@ from agentsh.exec.builtins import (
     builtin_test,
     builtin_unset,
 )
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ------------------------------------------------------------------
 # Fixtures

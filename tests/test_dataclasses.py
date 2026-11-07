@@ -15,8 +15,8 @@ import dataclasses
 
 import pytest
 
-from agentsh.ast.spans import Point, Span
-from agentsh.ast.words import (
+from spelaion.ast.spans import Point, Span
+from spelaion.ast.words import (
     ArithmeticExpansionSegment,
     CommandSubstitutionSegment,
     DoubleQuotedSegment,
@@ -25,14 +25,14 @@ from agentsh.ast.words import (
     ParameterExpansionSegment,
     SingleQuotedSegment,
 )
-from agentsh.parser.diagnostics import (
+from spelaion.parser.diagnostics import (
     Diagnostic,
     DiagnosticSeverity,
     UnsupportedSyntaxError,
 )
-from agentsh.runtime.events import EventKind, ExecutionEvent
-from agentsh.runtime.options import ShellOptions
-from agentsh.runtime.result import CommandResult, ShellError
+from spelaion.runtime.events import EventKind, ExecutionEvent
+from spelaion.runtime.options import ShellOptions
+from spelaion.runtime.result import CommandResult, ShellError
 
 # ── Point ────────────────────────────────────────────────────────────────
 

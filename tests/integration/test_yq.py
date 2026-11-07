@@ -1,6 +1,6 @@
 """Integration tests for the yq command."""
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 
 class TestYqYamlBasic:

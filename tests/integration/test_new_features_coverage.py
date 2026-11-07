@@ -3,7 +3,7 @@
 Focuses on edge cases and code paths not covered by the main test file.
 """
 
-from agentsh.api.engine import ShellEngine
+from spelaion.api.engine import ShellEngine
 
 # =========================================================================
 # ArithEvaluator coverage: eval_statement edge cases

@@ -1,4 +1,4 @@
-"""Tests for shared I/O helpers in agentsh.commands._io."""
+"""Tests for shared I/O helpers in spelaion.commands._io."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from io import StringIO
 
 import pytest
 
-from agentsh.commands._io import read_binary_inputs, read_text, read_text_inputs
-from agentsh.exec.redirs import IOContext
-from agentsh.runtime.state import ShellState
-from agentsh.vfs.filesystem import VirtualFilesystem
+from spelaion.commands._io import read_binary_inputs, read_text, read_text_inputs
+from spelaion.exec.redirs import IOContext
+from spelaion.runtime.state import ShellState
+from spelaion.vfs.filesystem import VirtualFilesystem
 
 # ------------------------------------------------------------------
 # Fixtures

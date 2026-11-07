@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from agentsh.policy.decisions import PolicyDecision, PolicyEngine
-from agentsh.policy.rules import PolicyConfig, PolicyRule
+from spelaion.policy.decisions import PolicyDecision, PolicyEngine
+from spelaion.policy.rules import PolicyConfig, PolicyRule
 
 # ---------------------------------------------------------------------------
 # Fixtures

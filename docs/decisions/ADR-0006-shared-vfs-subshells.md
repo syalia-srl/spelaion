@@ -6,7 +6,7 @@ Accepted
 ## Context
 In real Bash, a subshell `( ... )` runs in a forked child process. The child inherits a copy of all shell state (variables, functions, options) but shares the same filesystem with the parent. Variable assignments in the subshell do not affect the parent, but file writes do.
 
-agentsh has no processes to fork. We need to decide how subshell isolation works in a virtual environment.
+spelaion has no processes to fork. We need to decide how subshell isolation works in a virtual environment.
 
 Options considered:
 1. **Full isolation**: Copy both ShellState and VFS. Subshell file writes are invisible to the parent.

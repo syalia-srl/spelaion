@@ -1,9 +1,9 @@
 """Integration tests for the ShellEngine facade."""
 
-from agentsh.api.engine import ShellEngine
-from agentsh.policy.rules import PolicyConfig, PolicyRule
-from agentsh.runtime.result import CommandResult
-from agentsh.tools.registry import ToolRegistry
+from spelaion.api.engine import ShellEngine
+from spelaion.policy.rules import PolicyConfig, PolicyRule
+from spelaion.runtime.result import CommandResult
+from spelaion.tools.registry import ToolRegistry
 
 
 class _MockTool:
@@ -259,43 +259,3 @@ class TestEngineParse:
         engine = ShellEngine()
         result = engine.parse("echo (")
         assert result.has_errors
-
-
-class TestLangChainTools:
-    def test_create_tools(self) -> None:
-        from agentsh.langchain_tools.factory import create_agentsh_tools
-
-        parse_tool, plan_tool, run_tool = create_agentsh_tools()
-        assert parse_tool.name == "agentsh_parse"
-        assert plan_tool.name == "agentsh_plan"
-        assert run_tool.name == "agentsh_run"
-
-    def test_run_tool(self) -> None:
-        import json
-
-        from agentsh.langchain_tools.factory import create_agentsh_tools
-
-        _, _, run_tool = create_agentsh_tools()
-        result = json.loads(run_tool._run("echo hello"))
-        assert result["exit_code"] == 0
-        assert "hello" in result["stdout"]
-
-    def test_plan_tool(self) -> None:
-        import json
-
-        from agentsh.langchain_tools.factory import create_agentsh_tools
-
-        _, plan_tool, _ = create_agentsh_tools()
-        result = json.loads(plan_tool._run("echo hello"))
-        assert not result["has_errors"]
-        assert len(result["steps"]) > 0
-
-    def test_shared_state(self) -> None:
-        import json
-
-        from agentsh.langchain_tools.factory import create_agentsh_tools
-
-        _, _, run_tool = create_agentsh_tools()
-        run_tool._run("FOO=shared_value")
-        result = json.loads(run_tool._run("echo $FOO"))
-        assert "shared_value" in result["stdout"]

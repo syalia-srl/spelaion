@@ -1,4 +1,4 @@
-"""Tests for the agentsh CLI entry point (cli/main.py).
+"""Tests for the spelaion CLI entry point (cli/main.py).
 
 Covers:
 - parse subcommand: text output, JSON output, nonexistent file
@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from agentsh.cli.main import main
+from spelaion.cli.main import main
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -50,7 +50,7 @@ def multi_cmd_script(tmp_path):
 
 
 class TestParseCommand:
-    """Tests for 'agentsh parse <file>'."""
+    """Tests for 'spelaion parse <file>'."""
 
     def test_parse_success_text(self, echo_script, capsys):
         """parse with a valid script prints success message and returns 0."""
@@ -113,7 +113,7 @@ class TestParseCommand:
 
 
 class TestPlanCommand:
-    """Tests for 'agentsh plan <file>'."""
+    """Tests for 'spelaion plan <file>'."""
 
     def test_plan_success(self, echo_script, capsys):
         """plan with a valid script prints JSON plan and returns 0."""
@@ -156,7 +156,7 @@ class TestPlanCommand:
 
 
 class TestRunCommand:
-    """Tests for 'agentsh run <file>'."""
+    """Tests for 'spelaion run <file>'."""
 
     def test_run_echo(self, echo_script, capsys):
         """run a script with 'echo hello' returns 0 and prints hello."""
@@ -214,7 +214,7 @@ class TestNoCommand:
         assert rc == 1
         captured = capsys.readouterr()
         # argparse help should mention the program name or usage.
-        assert "agentsh" in captured.out or "usage" in captured.out.lower()
+        assert "spelaion" in captured.out or "usage" in captured.out.lower()
 
     def test_help_raises_systemexit(self):
         """--help causes argparse to raise SystemExit(0)."""
