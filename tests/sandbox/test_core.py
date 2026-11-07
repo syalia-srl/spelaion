@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from spelaion import Limits, Mount, Result, Sandbox
+from spelaion._shell import Shell
 from spelaion._truncate import truncate
 
 
@@ -393,14 +394,16 @@ def test_edit_refuses_non_utf8(sb: Sandbox, rw: Path) -> None:
 
 
 def test_internal_error_logged_not_returned(
-    sb: Sandbox, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    rw: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     def boom(*_: object) -> None:
         raise OSError(2, "No such file or directory", "/host/secret/path")
 
+    # The sandbox runs Shell in a child, out of monkeypatch's reach.
     monkeypatch.setattr("spelaion._shell.Executor.execute_node", boom)
+    shell = Shell([Mount("/scratch", rw)], "/scratch", {}, Limits())
     with caplog.at_level(logging.ERROR, logger="spelaion"):
-        r = sb.bash("true")
+        r = shell.call("bash", {"command": "true"})
     assert r.exit_code == 1
     assert r.stderr == (
         "spelaion: internal error: FileNotFoundError: No such file or directory\n"
