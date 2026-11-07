@@ -25,6 +25,10 @@ _DEFAULT_LIMITS = Limits()
 # A child starts in about 0.2 s; this only catches one that never does.
 _START_TIMEOUT_S = 60
 
+# A child that closed its socket exits at once; this only catches one that
+# hangs on its way out.
+_REAP_TIMEOUT_S = 5
+
 _log = logging.getLogger("spelaion")
 
 
@@ -170,7 +174,11 @@ class Sandbox:
         self._ready = True
 
     def _died(self) -> Result:
-        code = self._process.wait()
+        try:
+            code = self._process.wait(_REAP_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            self._process.kill()
+            code = self._process.wait()
         self._restart()
         return Result(
             stderr=f"spelaion: child exited ({code}); restarted\n", exit_code=125

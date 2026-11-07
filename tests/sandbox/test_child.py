@@ -129,6 +129,25 @@ def test_child_dies_mid_call(sb: Sandbox) -> None:
     assert sb.bash("echo ok").exit_code == 0
 
 
+def test_died_kills_a_child_that_does_not_exit(
+    sb: Sandbox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("spelaion.sandbox._REAP_TIMEOUT_S", 0.1)
+    real = sb._process
+    stuck = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    sb._process = stuck
+    try:
+        r = sb._died()
+        assert r.exit_code == 125 and "child exited (-9)" in r.stderr
+        assert stuck.returncode == -signal.SIGKILL
+        assert sb.bash("echo ok").stdout == "ok\n"
+    finally:
+        stuck.kill()
+        stuck.wait()
+        real.kill()
+        real.wait()
+
+
 def test_close_reaps_child(sb: Sandbox) -> None:
     pid = sb._child_pid  # pyright: ignore[reportPrivateUsage]
     sb.close()
