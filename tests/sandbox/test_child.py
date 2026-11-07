@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import os
 import signal
+import subprocess
+import sys
+import textwrap
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -23,6 +26,28 @@ def psutil_like_alive(pid: int) -> bool:
     except ProcessLookupError:
         return False
     return True
+
+
+def _gone(pid: int, within: float = 5) -> bool:
+    """*pid* exits, or is a zombie, within *within* seconds."""
+    end = time.monotonic() + within
+    while time.monotonic() < end:
+        try:
+            state = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0]
+        except FileNotFoundError:
+            return not psutil_like_alive(pid)
+        if state == "Z":
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _host_script(tmp_path: Path, body: str) -> Path:
+    """A host script with no ``__main__`` guard, run by the test's Python."""
+    (tmp_path / "rw").mkdir(exist_ok=True)
+    script = tmp_path / "host.py"
+    script.write_text(textwrap.dedent(body))
+    return script
 
 
 def _make(tmp_path: Path, limits: Limits | None = None) -> Sandbox:
@@ -70,11 +95,26 @@ def test_sandbox_works_after_kill(sb_1s: Sandbox) -> None:
     assert sb_1s.bash("cat /scratch/keep").stdout == "k"
 
 
-def test_memory_blowup_spares_parent(sb_small_mem: Sandbox) -> None:
-    # The emulated yes stops at 10,000 lines, so double a string instead.
-    r = sb_small_mem.bash("x=a; while true; do x=$x$x; done")
-    assert r.exit_code != 0 and not r.timed_out
+def test_memory_blowup_spares_parent(
+    sb_small_mem: Sandbox, capfd: pytest.CaptureFixture[str]
+) -> None:
+    # The emulated yes stops at 10,000 lines, so double a string instead:
+    # 2**29 characters, 512 MB, bounded even if the cap were missing.
+    r = sb_small_mem.bash("x=a; for i in $(seq 29); do x=$x$x; done; echo ${#x}")
+    assert r.exit_code == 1 and not r.timed_out
+    assert r.stderr == "spelaion: out of memory\n" and r.stdout == ""
     assert sb_small_mem.bash("echo ok").stdout == "ok\n"
+    assert "Traceback" not in capfd.readouterr().err
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="reads /proc")
+def test_memory_cap_is_set(sb_small_mem: Sandbox) -> None:
+    assert sb_small_mem.bash("true").exit_code == 0
+    pid = sb_small_mem._child_pid  # pyright: ignore[reportPrivateUsage]
+    limits = Path(f"/proc/{pid}/limits").read_text().splitlines()
+    data = next(line for line in limits if line.startswith("Max data size"))
+    soft, hard = data.split()[3:5]
+    assert int(soft) == int(hard) == 256 * 2**20
 
 
 def test_child_killed_from_outside(sb: Sandbox) -> None:
@@ -95,6 +135,65 @@ def test_close_reaps_child(sb: Sandbox) -> None:
 
 
 # --- Beyond the brief -------------------------------------------------------
+
+
+def test_call_after_kill_gets_its_whole_deadline(tmp_path: Path) -> None:
+    # The restarted child's start-up (~0.2 s) is not charged to the call:
+    # 0.2 s fails without the ready message.
+    with _make(tmp_path, Limits(timeout_s=0.2)) as s:
+        assert s.bash("echo first").stdout == "first\n"
+        assert s.bash(RUNAWAY).timed_out
+        r = s.bash("echo ok")
+        assert r.stdout == "ok\n" and not r.timed_out
+
+
+def test_unguarded_host_script(tmp_path: Path) -> None:
+    script = _host_script(
+        tmp_path,
+        f"""
+        from spelaion import Mount, Sandbox
+        with open({str(tmp_path / "runs")!r}, "a") as f:
+            f.write("run\\n")
+        sb = Sandbox([Mount("/scratch", {str(tmp_path / "rw")!r})])
+        print(sb.bash("echo ok").stdout, end="")
+        sb.close()
+        """,
+    )
+    p = subprocess.run(
+        [sys.executable, str(script)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert p.returncode == 0, p.stderr
+    assert p.stdout == "ok\n"
+    assert (tmp_path / "runs").read_text() == "run\n"
+
+
+def test_child_exits_when_parent_dies(tmp_path: Path) -> None:
+    script = _host_script(
+        tmp_path,
+        f"""
+        import time
+        from spelaion import Mount, Sandbox
+        sb = Sandbox([Mount("/scratch", {str(tmp_path / "rw")!r})])
+        sb.bash("true")
+        print(sb._child_pid, flush=True)
+        time.sleep(120)
+        """,
+    )
+    parent = subprocess.Popen(
+        [sys.executable, str(script)], stdout=subprocess.PIPE, text=True
+    )
+    try:
+        assert parent.stdout is not None
+        child = int(parent.stdout.readline())
+        assert psutil_like_alive(child)
+    finally:
+        parent.kill()
+        parent.wait()
+    assert _gone(child)
 
 
 def test_creation_time(tmp_path: Path) -> None:
@@ -144,10 +243,19 @@ def test_host_error_comes_back_as_result(sb: Sandbox) -> None:
 
 def test_calls_after_close_raise(tmp_path: Path) -> None:
     s = _make(tmp_path)
+    pid = s._child_pid  # pyright: ignore[reportPrivateUsage]
     s.close()
     s.close()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="sandbox is closed"):
         s.bash("true")
+    assert not psutil_like_alive(pid)
+
+
+def test_no_restart_while_closing(tmp_path: Path) -> None:
+    s = _make(tmp_path)
+    s._finalizer()  # pyright: ignore[reportPrivateUsage]
+    with pytest.raises(RuntimeError, match="sandbox is closed"):
+        s._restart()  # pyright: ignore[reportPrivateUsage]
 
 
 def test_errors_still_raise_at_construction(tmp_path: Path) -> None:
