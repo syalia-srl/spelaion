@@ -1,17 +1,39 @@
-"""The sandbox's child process: one Shell, serving calls until the pipe closes."""
+"""The sandbox's child process: one Shell, serving calls until the socket closes.
+
+The parent starts ``python -I -c BOOTSTRAP <fd>``. The first message on *fd*
+is the parent's ``sys.path`` and the pickled startup arguments, so the child
+finds spelaion wherever the parent found it, and never imports the host's
+main script.
+"""
 
 from __future__ import annotations
 
 import os
+import pickle
 import resource
 import signal
 from multiprocessing.connection import Connection
 
-from spelaion._shell import Shell
+from spelaion._shell import OUT_OF_MEMORY, Shell
 from spelaion._types import Limits, Result
-from spelaion._wire import TEST_HOOKS, Done, Host, ToChild
+from spelaion._wire import TEST_HOOKS, Done, Host, Ready, ToChild
 from spelaion.runtime.result import CommandResult
 from spelaion.vfs.mounts import Mount
+
+# Runs before spelaion is importable: only the standard library.
+BOOTSTRAP = (
+    "import sys\n"
+    "from multiprocessing.connection import Connection\n"
+    "conn = Connection(int(sys.argv[1]))\n"
+    "sys.path[:], args = conn.recv()\n"
+    "from spelaion._child import serve\n"
+    "serve(conn, args)\n"
+)
+
+
+def serve(conn: Connection, args: bytes) -> None:
+    """Unpickle the startup arguments from *args* and run :func:`main`."""
+    main(conn, *pickle.loads(args))
 
 
 def main(
@@ -33,6 +55,8 @@ def main(
         shell.tools.register(name, _HostProxy(name, conn, shell))
     if os.environ.get(TEST_HOOKS) == "1":
         shell.tools.register("kill_self_for_test", _KillSelf())
+    ready: Ready = ("ready",)
+    conn.send(ready)
     while True:
         try:
             msg: ToChild = conn.recv()
@@ -40,7 +64,11 @@ def main(
             return
         if msg[0] != "call":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
-        done: Done = ("done", shell.call(msg[1], msg[2]))
+        try:
+            result = shell.call(msg[1], msg[2])
+        except MemoryError:
+            result = Result(stderr=OUT_OF_MEMORY, exit_code=1)
+        done: Done = ("done", result)
         conn.send(done)
 
 

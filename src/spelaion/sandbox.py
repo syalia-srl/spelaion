@@ -3,22 +3,27 @@
 from __future__ import annotations
 
 import logging
-import multiprocessing
+import pickle
+import socket
+import subprocess
+import sys
 import threading
 import time
 import weakref
 from multiprocessing.connection import Connection
-from multiprocessing.process import BaseProcess
 from pathlib import Path
 from types import TracebackType
-from typing import Any, cast
+from typing import Any
 
 from spelaion import _child
 from spelaion._types import Limits, Result
-from spelaion._wire import Call, HostResult, ToParent
+from spelaion._wire import Call, HostResult, Ready, ToParent
 from spelaion.vfs.mounts import Mount, MountFs
 
 _DEFAULT_LIMITS = Limits()
+
+# A child starts in about 0.2 s; this only catches one that never does.
+_START_TIMEOUT_S = 60
 
 _log = logging.getLogger("spelaion")
 
@@ -30,9 +35,7 @@ class Sandbox:
     working directory) starts afresh from *cwd* and *env* on every call.
     The shell runs in a child Python process under a memory limit, killed
     and restarted when a call outlives ``limits.timeout_s``. The child is
-    started with multiprocessing's spawn method, which imports the host's
-    main script again: a script that creates a Sandbox does so under
-    ``if __name__ == "__main__":``.
+    its own entry point: it never imports the host's main script.
     """
 
     def __init__(
@@ -55,7 +58,8 @@ class Sandbox:
         self._env = dict(env or {})
         self._host_names: set[str] = set()
         self._lock = threading.Lock()
-        self._process: BaseProcess | None = None
+        # Set by close() and the finalizer: no new child after it.
+        self._closing = threading.Event()
         self._start()
 
     def bash(self, command: str) -> Result:
@@ -73,9 +77,8 @@ class Sandbox:
     def close(self) -> None:
         """Stop the child process; later calls raise RuntimeError."""
         with self._lock:
-            if self._process is not None:
-                self._finalizer()
-                self._process = None
+            self._closing.set()
+            self._finalizer()
 
     def __enter__(self) -> Sandbox:
         return self
@@ -90,7 +93,6 @@ class Sandbox:
 
     @property
     def _child_pid(self) -> int:
-        assert self._process is not None and self._process.pid is not None
         return self._process.pid
 
     def _serve_host(
@@ -101,9 +103,9 @@ class Sandbox:
 
     def _call(self, kind: str, payload: dict[str, Any]) -> Result:
         with self._lock:
-            if self._process is None:
+            if self._closing.is_set():
                 raise RuntimeError("the sandbox is closed")
-            if not self._process.is_alive():
+            if self._process.poll() is not None:
                 self._restart()
             try:
                 return self._exchange(kind, payload)
@@ -122,6 +124,11 @@ class Sandbox:
         without reading the call: a Unix socket closed with unread data
         resets its peer. A child that died after reading it gives a result.
         """
+        try:
+            if not self._ready:
+                self._await_ready()
+        except EOFError:
+            return self._died()
         timeout = self.limits.timeout_s
         deadline = time.monotonic() + timeout
         call: Call = ("call", kind, payload)
@@ -152,10 +159,18 @@ class Sandbox:
         remaining = deadline - time.monotonic()
         return remaining > 0 and self._conn.poll(remaining)
 
+    def _await_ready(self) -> None:
+        """Wait for a (re)started child, so its start is not charged to a call."""
+        if not self._conn.poll(_START_TIMEOUT_S):
+            self._process.kill()
+            raise EOFError
+        msg: Ready = self._conn.recv()
+        if msg[0] != "ready":
+            raise RuntimeError(f"unexpected message from the child: {msg[0]}")
+        self._ready = True
+
     def _died(self) -> Result:
-        assert self._process is not None
-        self._process.join()
-        code = self._process.exitcode
+        code = self._process.wait()
         self._restart()
         return Result(
             stderr=f"spelaion: child exited ({code}); restarted\n", exit_code=125
@@ -172,39 +187,55 @@ class Sandbox:
             return Result(stderr=f"{name}: internal error\n", exit_code=1)
 
     def _start(self) -> None:
-        ctx = multiprocessing.get_context("spawn")
-        # POSIX only, as RLIMIT_DATA is: the pair is never Windows pipes.
-        conn, child_conn = cast("tuple[Connection, Connection]", ctx.Pipe())
-        process = ctx.Process(
-            target=_child.main,
-            args=(
-                child_conn,
-                self._mounts,
-                self._cwd,
-                self._env,
-                self.limits,
-                self.python,
-                set(self._host_names),
-            ),
-            # multiprocessing kills daemonic children at interpreter exit.
-            daemon=True,
+        ours, theirs = socket.socketpair()
+        fd = theirs.fileno()
+        process = subprocess.Popen(
+            # -I: the child's sys.path is the parent's, sent first.
+            [sys.executable, "-I", "-c", _child.BOOTSTRAP, str(fd)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            pass_fds=(fd,),
+            close_fds=True,
         )
-        process.start()
-        child_conn.close()
+        theirs.close()
+        conn = Connection(ours.detach())
+        args = (
+            self._mounts,
+            self._cwd,
+            self._env,
+            self.limits,
+            self.python,
+            set(self._host_names),
+        )
+        conn.send((sys.path, pickle.dumps(args)))
         self._process = process
         self._conn = conn
-        # Also stops the child when the Sandbox is collected without close().
-        self._finalizer = weakref.finalize(self, _stop_child, process, conn)
+        self._ready = False
+        # Also stops the child when the Sandbox is collected without close(),
+        # and at interpreter exit. A child whose parent dies gets EOF.
+        self._finalizer = weakref.finalize(
+            self, _shut_down, self._closing, process, conn
+        )
 
     def _restart(self) -> None:
-        self._finalizer()
+        self._finalizer.detach()
+        _stop_child(self._process, self._conn)
+        if self._closing.is_set():
+            raise RuntimeError("the sandbox is closed")
         self._start()
 
 
-def _stop_child(process: BaseProcess, conn: Connection) -> None:
+def _shut_down(
+    closing: threading.Event, process: subprocess.Popen[bytes], conn: Connection
+) -> None:
+    closing.set()
+    _stop_child(process, conn)
+
+
+def _stop_child(process: subprocess.Popen[bytes], conn: Connection) -> None:
     conn.close()
     process.kill()
-    process.join()
+    process.wait()
 
 
 def _check_mounts(mounts: list[Mount]) -> None:
