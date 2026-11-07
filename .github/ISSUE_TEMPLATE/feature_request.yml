@@ -1,0 +1,22 @@
+name: Feature Request
+description: Suggest a new command, builtin, or capability
+labels: [enhancement]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What would you like agentsh to support?
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would you use this feature? What problem does it solve?
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: Show an example of how the API or command would work.
+      render: python

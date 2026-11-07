@@ -1,0 +1,29 @@
+name: Bug Report
+description: Report incorrect behavior or a crash
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal Reproduction
+      description: A short Python script or bash snippet that triggers the bug.
+      render: python
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: agentsh version
+      placeholder: "0.1.0"
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12"

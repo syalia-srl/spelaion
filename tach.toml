@@ -1,0 +1,85 @@
+# Tach — module dependency boundaries.
+# Run: uv run tach check
+# Sync with actual imports: uv run tach sync
+
+exclude = [
+    "**/__pycache__/**",
+    "tests/**",
+]
+source_roots = [
+    "src",
+]
+exact = true
+forbid_circular_dependencies = false
+
+# ── Leaf modules (no agentsh.* dependencies) ────────────────────────────
+
+[[modules]]
+path = "agentsh.ast"
+depends_on = []
+
+[[modules]]
+path = "agentsh.vfs"
+depends_on = []
+
+[[modules]]
+path = "agentsh.runtime"
+depends_on = []
+
+[[modules]]
+path = "agentsh.policy"
+depends_on = []
+
+# ── Core layers ─────────────────────────────────────────────────────────
+
+[[modules]]
+path = "agentsh.tools"
+depends_on = ["agentsh.runtime"]
+
+[[modules]]
+path = "agentsh.parser"
+depends_on = ["agentsh.ast"]
+
+[[modules]]
+path = "agentsh.commands"
+depends_on = ["agentsh.exec", "agentsh.runtime", "agentsh.vfs"]
+
+[[modules]]
+path = "agentsh.exec"
+depends_on = [
+    "agentsh.ast",
+    "agentsh.commands",
+    "agentsh.parser",
+    "agentsh.runtime",
+    "agentsh.semantics",
+]
+
+[[modules]]
+path = "agentsh.semantics"
+depends_on = [
+    "agentsh.ast",
+    "agentsh.commands",
+    "agentsh.exec",
+]
+
+# ── Entry points ────────────────────────────────────────────────────────
+
+[[modules]]
+path = "agentsh.api"
+depends_on = [
+    "agentsh.exec",
+    "agentsh.parser",
+    "agentsh.policy",
+    "agentsh.runtime",
+    "agentsh.semantics",
+    "agentsh.tools",
+    "agentsh.vfs",
+]
+
+[[modules]]
+path = "agentsh.cli"
+depends_on = ["agentsh.api", "agentsh.langchain_tools"]
+
+[[modules]]
+path = "agentsh.langchain_tools"
+depends_on = ["agentsh.api", "agentsh.ast"]
