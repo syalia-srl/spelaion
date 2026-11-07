@@ -12,7 +12,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 @command("sed")
 def cmd_sed(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     suppress = False
     in_place = False
@@ -343,7 +343,7 @@ def _sed_process(content: str, commands: list[_SedCommand], suppress: bool) -> s
 
 @command("awk")
 def cmd_awk(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     field_sep: str | None = None
     variables: dict[str, str] = {}

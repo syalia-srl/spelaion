@@ -699,36 +699,21 @@ class TestRm:
 
 
 class TestLn:
-    def test_copy_based_link(
-        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    @pytest.mark.parametrize("args", [["-s", "/a", "/b"], ["/a", "/b"], []])
+    def test_links_are_refused(
+        self,
+        args: list[str],
+        vfs: VirtualFilesystem,
+        state: ShellState,
+        io_ctx: IOContext,
     ) -> None:
-        result = cmd_ln(["hello.txt", "/link.txt"], state, vfs, io_ctx)
-        assert result.exit_code == 0
-        assert vfs.read("/link.txt") == b"hello world\n"
-        # Source still exists
-        assert vfs.read("/hello.txt") == b"hello world\n"
-
-    def test_symbolic_flag_accepted(
-        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
-    ) -> None:
-        """The -s flag is accepted (symlinks are copies in VFS)."""
-        result = cmd_ln(["-s", "hello.txt", "/link.txt"], state, vfs, io_ctx)
-        assert result.exit_code == 0
-        assert vfs.read("/link.txt") == b"hello world\n"
-
-    def test_nonexistent_source(
-        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
-    ) -> None:
-        result = cmd_ln(["missing.txt", "/link.txt"], state, vfs, io_ctx)
+        vfs.write("/a", b"x")
+        result = cmd_ln(args, state, vfs, io_ctx)
         assert result.exit_code == 1
-        assert "No such file" in io_ctx.stderr.getvalue()
-
-    def test_missing_operand(
-        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
-    ) -> None:
-        result = cmd_ln(["only_one"], state, vfs, io_ctx)
-        assert result.exit_code == 1
-        assert "missing file operand" in io_ctx.stderr.getvalue()
+        assert io_ctx.stderr.getvalue() == (
+            "ln: links are not supported in the sandbox\n"
+        )
+        assert not vfs.exists("/b")
 
 
 # ------------------------------------------------------------------

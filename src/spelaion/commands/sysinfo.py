@@ -16,7 +16,7 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def _run_sub(argv: list[str], io: IOContext) -> CommandResult:
 
 @command("arch")
 def cmd_arch(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     arch = state.get_var("SPELAION_ARCH") or "x86_64"
     io.stdout.write(arch + "\n")
@@ -58,7 +58,7 @@ def cmd_arch(
 
 @command("hostname")
 def cmd_hostname(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     name = state.get_var("HOSTNAME") or "spelaion"
     # -f flag: in a virtual shell, just return the same name
@@ -68,7 +68,7 @@ def cmd_hostname(
 
 @command("free")
 def cmd_free(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     human = "-h" in args
     mega = "-m" in args
@@ -117,7 +117,7 @@ def cmd_free(
 
 @command("uptime")
 def cmd_uptime(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     io.stdout.write("up 0 min, 1 user, load average: 0.00, 0.00, 0.00\n")
     return CommandResult(exit_code=0)
@@ -125,7 +125,7 @@ def cmd_uptime(
 
 @command("nproc")
 def cmd_nproc(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     n = state.get_var("SPELAION_NPROC") or "4"
     io.stdout.write(n + "\n")
@@ -134,7 +134,7 @@ def cmd_nproc(
 
 @command("groups")
 def cmd_groups(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = args[0] if args else (state.get_var("USER") or "root")
     io.stdout.write(user + "\n")
@@ -143,7 +143,7 @@ def cmd_groups(
 
 @command("logname")
 def cmd_logname(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = state.get_var("USER") or "root"
     io.stdout.write(user + "\n")
@@ -152,7 +152,7 @@ def cmd_logname(
 
 @command("users")
 def cmd_users(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = state.get_var("USER") or "root"
     io.stdout.write(user + "\n")
@@ -161,7 +161,7 @@ def cmd_users(
 
 @command("w")
 def cmd_w(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = state.get_var("USER") or "root"
     now = datetime.datetime.now().strftime("%H:%M:%S")
@@ -175,7 +175,7 @@ def cmd_w(
 
 @command("who")
 def cmd_who(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     user = state.get_var("USER") or "root"
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -185,7 +185,7 @@ def cmd_who(
 
 @command("last")
 def cmd_last(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     count = 10
     i = 0
@@ -208,7 +208,7 @@ def cmd_last(
 
 @command("printenv")
 def cmd_printenv(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if args:
         exit_code = 0
@@ -228,7 +228,7 @@ def cmd_printenv(
 
 @command("time")
 def cmd_time(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if not args:
         io.stderr.write("time: missing command\n")
@@ -240,7 +240,7 @@ def cmd_time(
 
 @command("timeout")
 def cmd_timeout(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Skip optional -s SIGNAL and DURATION, then run COMMAND...
     i = 0
@@ -268,7 +268,7 @@ def cmd_timeout(
 
 @command("nice")
 def cmd_nice(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Skip -n N if present, then run COMMAND...
     i = 0
@@ -284,28 +284,28 @@ def cmd_nice(
 
 @command("renice")
 def cmd_renice(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("chrt")
 def cmd_chrt(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("ionice")
 def cmd_ionice(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("nohup")
 def cmd_nohup(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if not args:
         io.stderr.write("nohup: missing command\n")
@@ -315,7 +315,7 @@ def cmd_nohup(
 
 @command("flock")
 def cmd_flock(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Skip optional -x/-s, FILE, then run COMMAND...
     i = 0
@@ -333,35 +333,35 @@ def cmd_flock(
 
 @command("sync")
 def cmd_sync(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("fsync")
 def cmd_fsync(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("usleep")
 def cmd_usleep(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("clear")
 def cmd_clear(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     return CommandResult(exit_code=0)
 
 
 @command("kill")
 def cmd_kill(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Virtual: no processes to kill. Accept -SIGNAL and PID args silently.
     return CommandResult(exit_code=0)
@@ -369,7 +369,7 @@ def cmd_kill(
 
 @command("getopt")
 def cmd_getopt(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     """Minimal getopt: parse -o OPTSTRING -- ARGS."""
     optstring = ""
@@ -421,7 +421,7 @@ def cmd_getopt(
 
 @command("tty")
 def cmd_tty(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     io.stdout.write("not a tty\n")
     return CommandResult(exit_code=1)
@@ -429,7 +429,7 @@ def cmd_tty(
 
 @command("ps")
 def cmd_ps(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     io.stdout.write("  PID TTY          TIME CMD\n")
     io.stdout.write("    1 pts/0    00:00:00 spelaion\n")
@@ -438,7 +438,7 @@ def cmd_ps(
 
 @command("top")
 def cmd_top(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     # Non-interactive: print one snapshot and exit
     io.stdout.write("top - virtual (spelaion)\n")

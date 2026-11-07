@@ -11,12 +11,12 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @command("cat")
 def cmd_cat(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     number_lines = False
     files: list[str] = []
@@ -52,7 +52,7 @@ def cmd_cat(
 
 @command("head")
 def cmd_head(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     n = 10
     files: list[str] = []
@@ -89,7 +89,7 @@ def cmd_head(
 
 @command("tail")
 def cmd_tail(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     n = 10
     from_start = False
@@ -129,7 +129,7 @@ def cmd_tail(
 
 @command("tee")
 def cmd_tee(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     append = False
     files: list[str] = []
@@ -152,7 +152,7 @@ def cmd_tee(
 
 @command("touch")
 def cmd_touch(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     for f in args:
         abs_path = vfs.resolve(f, state.cwd)
@@ -163,7 +163,7 @@ def cmd_touch(
 
 @command("mkdir")
 def cmd_mkdir(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     parents = False
     dirs: list[str] = []
@@ -193,7 +193,7 @@ def cmd_mkdir(
 
 @command("cp")
 def cmd_cp(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     recursive = False
     paths: list[str] = []
@@ -233,7 +233,7 @@ def cmd_cp(
 
 @command("mv")
 def cmd_mv(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     paths: list[str] = [a for a in args if not a.startswith("-")]
 
@@ -258,7 +258,7 @@ def cmd_mv(
 
 @command("rm")
 def cmd_rm(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     recursive = False
     force = False
@@ -305,23 +305,7 @@ def cmd_rm(
 
 @command("ln")
 def cmd_ln(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
-    # VFS has no real symlinks; -s creates a copy as a fallback.
-    paths: list[str] = [a for a in args if not a.startswith("-")]
-
-    if len(paths) < 2:
-        io.stderr.write("ln: missing file operand\n")
-        return CommandResult(exit_code=1)
-
-    src = vfs.resolve(paths[0], state.cwd)
-    dst = vfs.resolve(paths[1], state.cwd)
-    try:
-        vfs.copy_file(src, dst)
-    except FileNotFoundError:
-        io.stderr.write(
-            f"ln: cannot create link '{paths[1]}': No such file or directory\n"
-        )
-        return CommandResult(exit_code=1)
-
-    return CommandResult(exit_code=0)
+    io.stderr.write("ln: links are not supported in the sandbox\n")
+    return CommandResult(exit_code=1)

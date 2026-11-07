@@ -9,10 +9,10 @@ if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.result import CommandResult
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 CommandFn = Callable[
-    ["list[str]", "ShellState", "VirtualFilesystem", "IOContext"],
+    ["list[str]", "ShellState", "Filesystem", "IOContext"],
     "CommandResult",
 ]
 

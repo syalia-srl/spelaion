@@ -15,7 +15,7 @@ from spelaion.exec.word_eval import CommandSubstitutionHook, WordEvaluator
 if TYPE_CHECKING:
     from spelaion.ast.nodes import Word
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 __all__ = [
     "CommandSubstitutionHook",
@@ -27,7 +27,7 @@ __all__ = [
 def expand_word(
     word: Word,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     cmdsub_hook: CommandSubstitutionHook | None = None,
 ) -> list[str]:
     """Expand a Word into a list of strings (post word-splitting).
@@ -41,7 +41,7 @@ def expand_word(
 def expand_word_single(
     word: Word,
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     cmdsub_hook: CommandSubstitutionHook | None = None,
 ) -> str:
     """Expand a Word into a single string (no word splitting/globbing).
@@ -54,7 +54,7 @@ def expand_word_single(
 
 def _make_evaluator(
     state: ShellState,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     cmdsub_hook: CommandSubstitutionHook | None,
 ) -> WordEvaluator:
     """Create a temporary WordEvaluator for the functional API."""

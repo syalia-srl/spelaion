@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from spelaion.policy.decisions import PolicyEngine
     from spelaion.runtime.state import ShellState
     from spelaion.tools.registry import ToolRegistry
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 class Executor:
@@ -35,7 +35,7 @@ class Executor:
     def __init__(
         self,
         state: ShellState,
-        vfs: VirtualFilesystem,
+        vfs: Filesystem,
         tools: ToolRegistry,
         policy: PolicyEngine,
     ) -> None:

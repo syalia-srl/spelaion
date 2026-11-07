@@ -12,12 +12,12 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @command("sort")
 def cmd_sort(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     reverse = False
     numeric = False
@@ -74,7 +74,7 @@ def cmd_sort(
 
 @command("uniq")
 def cmd_uniq(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     count = False
     only_dup = False
@@ -117,7 +117,7 @@ def cmd_uniq(
 
 @command("wc")
 def cmd_wc(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     show_lines = False
     show_words = False
@@ -158,7 +158,7 @@ def cmd_wc(
 
 @command("cut")
 def cmd_cut(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     delim = "\t"
     fields: list[int] = []
@@ -240,7 +240,7 @@ def _parse_char_ranges(spec: str) -> list[tuple[int, int]]:
 
 @command("tr")
 def cmd_tr(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     delete = False
     squeeze = False
@@ -345,7 +345,7 @@ def _expand_tr_set(spec: str) -> str:
 
 @command("rev")
 def cmd_rev(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     text, exit_code = read_text_inputs(args, state, vfs, io, "rev")
     for line in text.splitlines():
@@ -355,7 +355,7 @@ def cmd_rev(
 
 @command("nl")
 def cmd_nl(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     body_numbering = "t"  # default: number non-empty lines
     files: list[str] = []
@@ -385,7 +385,7 @@ def cmd_nl(
 
 @command("paste")
 def cmd_paste(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     delim = "\t"
     files: list[str] = []

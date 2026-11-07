@@ -11,12 +11,12 @@ from spelaion.runtime.result import CommandResult
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
     from spelaion.runtime.state import ShellState
-    from spelaion.vfs.filesystem import VirtualFilesystem
+    from spelaion.vfs.base import Filesystem
 
 
 @command("ls")
 def cmd_ls(  # noqa: C901
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     long_fmt = False
     show_all = False
@@ -78,7 +78,7 @@ def _ls_list_dir(
     long_fmt: bool,
     show_all: bool,
     one_per_line: bool,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> None:
     try:
@@ -104,7 +104,7 @@ def _ls_print_entry(
     abs_path: str,
     name: str,
     long_fmt: bool,
-    vfs: VirtualFilesystem,
+    vfs: Filesystem,
     io: IOContext,
 ) -> None:
     if not long_fmt:
@@ -123,7 +123,7 @@ def _ls_print_entry(
 
 @command("basename")
 def cmd_basename(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if not args:
         io.stderr.write("basename: missing operand\n")
@@ -141,7 +141,7 @@ def cmd_basename(
 
 @command("dirname")
 def cmd_dirname(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     if not args:
         io.stderr.write("dirname: missing operand\n")
@@ -153,7 +153,7 @@ def cmd_dirname(
 
 @command("readlink", "realpath")
 def cmd_realpath(
-    args: list[str], state: ShellState, vfs: VirtualFilesystem, io: IOContext
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     paths: list[str] = [a for a in args if not a.startswith("-")]
     if not paths:
