@@ -167,3 +167,12 @@ class TestNormalizeRedirection:
         prog = _parse_and_normalize("echo hello")
         assert prog.span.start_byte == 0
         assert prog.span.end_byte == 10
+
+
+class TestNormalizeNonAscii:
+    def test_words_after_non_ascii_text(self) -> None:
+        from spelaion import Bash
+
+        result = Bash().run("echo ñ; echo 'x y' \"é $((1+1))\"")
+        assert result.exit_code == 0
+        assert result.stdout == "ñ\nx y é 2\n"
