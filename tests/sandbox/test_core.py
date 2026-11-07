@@ -103,6 +103,15 @@ def test_mount_deleted_later(sb: Sandbox, rw: Path) -> None:
     shutil.rmtree(rw)
     r = sb.bash("ls /scratch")
     assert r.exit_code != 0 and "Traceback" not in r.stderr
+    assert "No such file or directory" in r.stderr
+
+
+def test_write_does_not_recreate_deleted_mount(sb: Sandbox, rw: Path) -> None:
+    shutil.rmtree(rw)
+    for r in (sb.write("/scratch/x", "a"), sb.bash("echo a > /scratch/x")):
+        assert r.exit_code == 1 and "No such file or directory" in r.stderr
+    assert sb.bash("mkdir -p /scratch/d").exit_code == 1
+    assert not rw.exists()
 
 
 # --- Construction -----------------------------------------------------------
