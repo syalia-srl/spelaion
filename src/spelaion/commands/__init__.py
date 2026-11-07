@@ -11,6 +11,7 @@ from spelaion.commands import (  # noqa: F401
     math_cmd,
     modern_search,
     pathutil,
+    python_cmd,
     search,
     stream,
     structured,

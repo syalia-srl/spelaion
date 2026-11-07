@@ -52,6 +52,16 @@ class Sandbox:
         python: bool = False,
     ) -> None:
         _check_mounts(mounts)
+        if python:
+            from spelaion.python.fetch import ensure_python
+            from spelaion.python.runner import reserved
+
+            for m in mounts:
+                if reserved(m.path):
+                    raise ValueError(
+                        f"mount {m.path}: /lib and /site belong to python here"
+                    )
+            ensure_python()
         fs = MountFs(list(mounts), max_disk=limits.max_disk)
         if not cwd.startswith("/") or not fs.is_dir(cwd):
             raise ValueError(f"cwd {cwd} is not an absolute path to a folder")

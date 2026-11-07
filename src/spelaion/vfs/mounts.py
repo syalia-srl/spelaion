@@ -86,6 +86,15 @@ class MountFs:
         )
         self._max_disk = max_disk
 
+    @property
+    def mounts(self) -> list[Mount]:
+        """The mounts, longest path first, each host folder resolved."""
+        return [Mount(m.path, m.host, m.readonly) for m in self._mounts]
+
+    @property
+    def max_disk(self) -> int | None:
+        return self._max_disk
+
     # ------------------------------------------------------------------
     # The resolver
     # ------------------------------------------------------------------
