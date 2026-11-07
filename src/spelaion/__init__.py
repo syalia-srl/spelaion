@@ -2,20 +2,26 @@
 
 __version__ = "0.1.0"
 
+from spelaion._types import Attachment, Limits, Result
 from spelaion.api.bash import (
     Bash,
     CommandContext,
     CustomCommand,
-    Limits,
     RunResult,
     define_command,
 )
+from spelaion.sandbox import Sandbox
+from spelaion.vfs.mounts import Mount
 
 __all__ = [
+    "Attachment",
     "Bash",
     "CommandContext",
     "CustomCommand",
     "Limits",
+    "Mount",
+    "Result",
     "RunResult",
+    "Sandbox",
     "define_command",
 ]

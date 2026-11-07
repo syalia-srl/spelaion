@@ -82,3 +82,30 @@ depends_on = [
 [[modules]]
 path = "spelaion.cli"
 depends_on = ["spelaion.api", "spelaion.ast"]
+
+# ── Sandbox ─────────────────────────────────────────────────────────────
+
+[[modules]]
+path = "spelaion._types"
+depends_on = []
+
+[[modules]]
+path = "spelaion._truncate"
+depends_on = []
+
+[[modules]]
+path = "spelaion._shell"
+depends_on = [
+    "spelaion._truncate",
+    "spelaion._types",
+    "spelaion.exec",
+    "spelaion.parser",
+    "spelaion.policy",
+    "spelaion.runtime",
+    "spelaion.tools",
+    "spelaion.vfs",
+]
+
+[[modules]]
+path = "spelaion.sandbox"
+depends_on = ["spelaion._shell", "spelaion._types", "spelaion.vfs"]
