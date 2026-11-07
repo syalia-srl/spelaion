@@ -287,3 +287,116 @@ def test_cannot_remove_from_readonly_or_a_mount_point(fs: MountFs, ro: Path) -> 
     with pytest.raises(OSError):
         fs.rmtree("/scratch")
     assert (ro / "keep").exists()
+
+
+# -- fix round 1 --------------------------------------------------------------
+
+
+def test_mv_onto_symlink_out_stays_inside(
+    fs: MountFs, rw: Path, tmp_path: Path
+) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (rw / "f").write_text("secret")
+    (rw / "evil").symlink_to(outside)
+    code, _, _ = run(fs, "mv /scratch/f /scratch/evil")
+    assert list(outside.iterdir()) == []
+    if code == 0:
+        # The link itself was replaced by the file.
+        assert not (rw / "evil").is_symlink()
+        assert (rw / "evil").read_text() == "secret"
+
+
+def test_rename_across_host_filesystems(
+    fs: MountFs, rw: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def exdev(src: object, dst: object) -> None:
+        raise OSError(errno.EXDEV, "Invalid cross-device link")
+
+    (rw / "d").mkdir()
+    (rw / "d" / "a").write_text("1")
+    (rw / "f").write_text("2")
+    monkeypatch.setattr("spelaion.vfs.mounts.os.rename", exdev)
+    fs.rename("/scratch/d", "/scratch/e")
+    fs.rename("/scratch/f", "/scratch/g")
+    assert (rw / "e" / "a").read_text() == "1"
+    assert (rw / "g").read_text() == "2"
+    assert not (rw / "d").exists()
+    assert not (rw / "f").exists()
+
+
+def test_mv_dir_into_itself_names_no_host_path(fs: MountFs, tmp_path: Path) -> None:
+    code, out, err = run(fs, "mkdir /scratch/d && mv /scratch/d /scratch/d/x")
+    assert code == 1
+    assert "subdirectory of itself" in err
+    assert str(tmp_path) not in out + err
+
+
+def test_errno_less_oserror_becomes_eio(fs: MountFs, rw: Path) -> None:
+    from spelaion.vfs.mounts import _as_sandbox
+
+    with pytest.raises(OSError) as e, _as_sandbox("/scratch/x"):
+        raise OSError(f"cannot copy {rw}/x")
+    assert e.value.errno == errno.EIO
+    assert str(rw) not in str(e.value)
+
+
+def test_ls_lists_past_a_symlink_out(fs: MountFs, rw: Path) -> None:
+    (rw / "a").write_text("1")
+    (rw / "b").write_text("2")
+    (rw / "python").symlink_to("/usr/bin/python3")
+    code, out, err = run(fs, "ls -l /scratch")
+    assert code == 0, err
+    for name in ("a", "b", "python"):
+        assert name in out.split()
+    code, _, err = run(fs, "cat /scratch/python")
+    assert code == 1
+    assert "Permission denied" in err
+
+
+def test_chmod_reaches_the_host(fs: MountFs, rw: Path) -> None:
+    (rw / "s.sh").write_text("echo")
+    (rw / "s.sh").chmod(0o644)
+    code, _, err = run(fs, "chmod 755 /scratch/s.sh && chmod g-x /scratch/s.sh")
+    assert code == 0, err
+    assert (rw / "s.sh").stat().st_mode & 0o777 == 0o745
+
+
+def test_chmod_recursive_reaches_the_host(fs: MountFs, rw: Path) -> None:
+    (rw / "d").mkdir()
+    (rw / "d" / "a").write_text("1")
+    code, _, err = run(fs, "chmod -R 700 /scratch/d")
+    assert code == 0, err
+    assert (rw / "d").stat().st_mode & 0o777 == 0o700
+    assert (rw / "d" / "a").stat().st_mode & 0o777 == 0o700
+
+
+def test_chmod_readonly_mount_refused(fs: MountFs, ro: Path) -> None:
+    (ro / "a").write_text("1")
+    (ro / "a").chmod(0o644)
+    code, _, err = run(fs, "chmod 777 /project/a")
+    assert code == 1
+    assert "Read-only file system" in err
+    assert (ro / "a").stat().st_mode & 0o777 == 0o644
+
+
+def test_shred_overwrites_the_host_file(fs: MountFs, rw: Path, ro: Path) -> None:
+    (rw / "k").write_text("key")
+    code, _, err = run(fs, "shred /scratch/k")
+    assert code == 0, err
+    assert (rw / "k").read_bytes() == b"\x00\x00\x00"
+    (ro / "k").write_text("key")
+    code, _, err = run(fs, "shred /project/k")
+    assert code == 1
+    assert (ro / "k").read_text() == "key"
+
+
+def test_nul_in_path_is_einval(fs: MountFs) -> None:
+    for call in (
+        lambda: fs.host_path("/scratch/a\0b"),
+        lambda: fs.host_path("/scratch/a\0b", write=True),
+        lambda: fs.unlink("/scratch/a\0b"),
+    ):
+        with pytest.raises(OSError) as e:
+            call()
+        assert e.value.errno == errno.EINVAL

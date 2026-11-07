@@ -118,6 +118,10 @@ def _ls_print_entry(
             size = len(vfs.read(abs_path))
         except (FileNotFoundError, IsADirectoryError):
             size = 0
+        except PermissionError:
+            # A symlink out of its mount: listed, never followed.
+            io.stdout.write(f"-?????????  ?  {name}\n")
+            return
         io.stdout.write(f"-rw-r--r--  {size}  {name}\n")
 
 

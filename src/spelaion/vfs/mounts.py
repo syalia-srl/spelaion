@@ -55,13 +55,21 @@ def _normalize(path: str) -> str:
 
 @contextlib.contextmanager
 def _as_sandbox(path: str) -> Iterator[None]:
-    """Re-raise host ``OSError``s naming *path*, never the host path."""
+    """Re-raise host ``OSError``s naming *path*, never the host path.
+
+    An ``OSError`` without errno (``shutil.Error``) carries host paths in
+    its message, so it becomes ``EIO``.
+    """
     try:
         yield
     except OSError as e:
-        if e.errno is None:
-            raise
-        raise _error(e.errno, path) from None
+        raise _error(e.errno or errno.EIO, path) from None
+
+
+def _check_name(path: str) -> None:
+    # The host's path functions raise ValueError on NUL, which no caller catches.
+    if "\0" in path:
+        raise _error(errno.EINVAL, path.replace("\0", "\\0"))
 
 
 class MountFs:
@@ -103,6 +111,7 @@ class MountFs:
         4. For a write, refuse a read-only mount (``EROFS``) and a full
            disk (``EDQUOT``).
         """
+        _check_name(path)
         path = _normalize(path)
         mount = self._find(path)
         if mount is None:
@@ -170,6 +179,7 @@ class MountFs:
         a read-only mount is refused, and a mount point cannot be removed.
         The disk cap does not apply, so a full disk can still be cleaned.
         """
+        _check_name(path)
         path = _normalize(path)
         mount = self._find(path)
         if mount is None:
@@ -202,7 +212,12 @@ class MountFs:
         for name in self.listdir(path):
             child = path.rstrip("/") + "/" + name
             children[name] = DirNode() if self._kind(child) == "dir" else FileNode()
-        return DirNode(children=children)
+        mode = 0o755
+        if self._find(path) is not None:
+            # A folder above a nested mount may have no host entry.
+            with contextlib.suppress(OSError):
+                mode = self.host_path(path).stat().st_mode & 0o7777
+        return DirNode(children=children, mode=mode)
 
     def read(self, path: str) -> bytes:
         path = _normalize(path)
@@ -274,14 +289,46 @@ class MountFs:
             entry.rmdir()
 
     def rename(self, src: str, dst: str) -> None:
+        """Move *src* to *dst*, or into *dst* when it is a directory.
+
+        ``os.rename`` replaces a symlink at *dst* and never follows it.
+        Across host filesystems the entry is copied through the resolver,
+        then removed.
+        """
         src = _normalize(src)
         dst = _normalize(dst)
         src_entry = self._entry(src)
         if self.is_dir(dst):
             dst = dst.rstrip("/") + "/" + posixpath.basename(src)
+        if dst.startswith(src.rstrip("/") + "/"):
+            raise OSError(
+                errno.EINVAL,
+                f"cannot move '{src}' to a subdirectory of itself, '{dst}'",
+                dst,
+            )
         dst_entry = self._entry(dst)
-        with _as_sandbox(src):
-            shutil.move(src_entry, dst_entry)
+        try:
+            os.rename(src_entry, dst_entry)
+        except OSError as e:
+            if e.errno != errno.EXDEV:
+                raise _error(e.errno or errno.EIO, src) from None
+        else:
+            return
+        if self.is_dir(src) and not src_entry.is_symlink():
+            self.copy_tree(src, dst)
+        else:
+            self.copy_file(src, dst)
+        self.rmtree(src)
+
+    def chmod(self, path: str, mode: int) -> None:
+        """Set the permission bits of the host entry behind *path*."""
+        path = _normalize(path)
+        host = self.host_path(path)
+        mount = self._find(path)
+        if mount is not None and mount.readonly:
+            raise _error(errno.EROFS, path)
+        with _as_sandbox(path):
+            os.chmod(host, mode & 0o777)
 
     def copy_file(self, src: str, dst: str) -> None:
         src = _normalize(src)
