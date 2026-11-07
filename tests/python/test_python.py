@@ -77,6 +77,33 @@ def test_cwd_matches_shell(sb: Sandbox) -> None:
     assert r.stdout == "/scratch\n"
 
 
+@pytest.fixture
+def sb_root(tmp_path: Path) -> Iterator[Sandbox]:
+    ro, rw = tmp_path / "ro", tmp_path / "rw"
+    ro.mkdir()
+    rw.mkdir()
+    mounts = [Mount("/project", ro, readonly=True), Mount("/scratch", rw)]
+    with Sandbox(mounts, cwd="/", python=True) as s:
+        yield s
+
+
+def test_cwd_root(sb_root: Sandbox) -> None:
+    r = sb_root.bash("python -c 'print(1)'")
+    assert (r.exit_code, r.stdout, r.stderr) == (0, "1\n", "")
+
+
+def test_cwd_root_script_by_absolute_path(sb_root: Sandbox) -> None:
+    sb_root.write("/scratch/s.py", "import sys; print(sys.argv)\n")
+    r = sb_root.bash("python /scratch/s.py x")
+    assert (r.exit_code, r.stdout) == (0, "['/scratch/s.py', 'x']\n")
+
+
+def test_cwd_above_mounts(tmp_path: Path) -> None:
+    with Sandbox([Mount("/a/b", tmp_path)], cwd="/a", python=True) as s:
+        r = s.bash("python -c 'import os; print(os.getcwd())'")
+    assert (r.exit_code, r.stdout, r.stderr) == (0, "/\n", "")
+
+
 def test_pipes(sb: Sandbox) -> None:
     r = sb.bash(
         "echo 3 | python -c 'import sys; print(int(sys.stdin.read()) * 2)' | cat"

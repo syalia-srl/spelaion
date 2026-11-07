@@ -1,10 +1,12 @@
 """Run in the guest as ``python -m _boot CWD -- ARGS...``.
 
 WASI gives the guest no working directory of its own, so this one changes
-to *CWD* and then behaves like the ``python`` command line for ``-c CODE``,
-``-m MOD``, ``SCRIPT`` and ``-``, setting ``sys.argv`` as CPython would.
+to *CWD* when it lies in a mount, and then behaves like the ``python``
+command line for ``-c CODE``, ``-m MOD``, ``SCRIPT`` and ``-``, setting
+``sys.argv`` as CPython would.
 """
 
+import contextlib
 import os
 import runpy
 import sys
@@ -81,7 +83,10 @@ def _run(args: list[str]) -> None:
 def main() -> None:
     cwd, sep, args = sys.argv[1], sys.argv[2], sys.argv[3:]
     assert sep == "--"
-    os.chdir(cwd)
+    # "/" or a folder above the mounts: nothing is preopened there, so the
+    # guest stays in its default "/" and relative paths fail there.
+    with contextlib.suppress(OSError):
+        os.chdir(cwd)
     # WASI leaves it empty; runpy names it in "No module named" errors.
     sys.executable = sys.executable or "python"
     try:
