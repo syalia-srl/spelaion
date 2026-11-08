@@ -213,6 +213,20 @@ CASES: list[Case] = [
     Case("$? after x=$(timeout)", "x=$(timeout 0.1 sleep 1); echo $?"),
     Case("$(...) stderr shows", "{ x=$(cat /nope); } 2>&1 | wc -l"),
     Case("$(...) 2>&1 inside", 'x=$(cat /nope 2>&1); [ -n "$x" ] && echo captured'),
+    # Process substitution.
+    Case("cat <(...)", "cat <(echo hi)"),
+    Case(
+        "diff <(...) <(...) same",
+        "diff <(echo a) <(echo a) && echo same",
+        gap="diff without -u prints difflib.ndiff and exits 1 for equal files",
+    ),
+    Case(
+        "diff -u <(...) <(...)",
+        "diff -u <(printf 'a\\nb\\n') <(printf 'a\\nc\\n') | tail -n +3",
+    ),
+    Case("wc -l < <(...)", "wc -l < <(printf '1\\n2\\n')"),
+    Case("while read < <(...)", "while read l; do echo got $l; done < <(echo q)"),
+    Case("<(...) leaves no file", "cat <(echo hi) >/dev/null; ls | wc -l"),
     # python with the bundled PyYAML.
     Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
     Case(

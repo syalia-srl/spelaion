@@ -44,3 +44,11 @@ def test_memory_blowup_in_substitution_is_reported(tmp_path: Path) -> None:
             1,
         )
         assert sb.bash("echo ok").stdout == "ok\n"
+
+
+def test_procsub_output_lasts_one_call(tmp_path: Path) -> None:
+    shell = _shell(tmp_path)
+    path = shell.call("bash", {"command": "echo <(echo hi)"}).stdout.strip()
+    r = shell.call("bash", {"command": f"cat {path}"})
+    assert r.exit_code == 1 and "No such file" in r.stderr
+    assert shell.call("bash", {"command": "cat <(echo hi)"}).stdout == "hi\n"
