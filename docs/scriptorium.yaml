@@ -11,6 +11,7 @@ vars:
 files:
   - chapters/00-index.md
   - chapters/01-quick-start.md
+  - chapters/02-mounts.md
 
 outputs:
   site:
