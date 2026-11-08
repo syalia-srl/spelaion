@@ -168,7 +168,8 @@ class Sandbox:
 
         It listens on *host* only, at *port*, or a free port for 0, from a
         background thread. With a *token*, a request without the header
-        ``Authorization: Bearer <token>`` gets 401. Calls arriving together
+        ``Authorization: Bearer <token>`` gets 401; a *host* beyond loopback
+        without a token raises ``ValueError``. Calls arriving together
         run one after the other. Each ``tools/list`` reads the host commands
         registered by then. Closing the sandbox does not stop the server:
         call ``McpServer.stop()``.

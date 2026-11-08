@@ -23,9 +23,11 @@ classifiers = [
     "Topic :: System :: Shells",
 ]
 dependencies = [
+    "anyio>=4.9",
     "mcp==2.3.0",
     "tree-sitter>=0.24.0",
     "tree-sitter-bash>=0.23.0",
+    "uvicorn>=0.31.1",
     "wasmtime>=50.0.1",
 ]
 

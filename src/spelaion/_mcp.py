@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import base64
 import hmac
+import ipaddress
+import logging
 import socket
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 import anyio.to_thread
@@ -15,7 +17,6 @@ import mcp_types as types
 import uvicorn
 from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server
-from starlette.types import ASGIApp, Receive, Scope, Send
 
 from spelaion._tools import Tool, ToolOutput
 
@@ -24,6 +25,24 @@ _START_TIMEOUT_S = 30
 
 # Open streams get this long to finish when the server stops.
 _GRACEFUL_S = 2
+
+Scope = MutableMapping[str, Any]
+Message = MutableMapping[str, Any]
+Receive = Callable[[], Awaitable[Message]]
+Send = Callable[[Message], Awaitable[None]]
+ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
+
+# Threads of servers being stopped: uvicorn's log of the calls it cuts off
+# there ("Cancel 1 running task(s)", a CancelledError traceback) is dropped.
+_stopping: set[str] = set()
+
+
+class _QuietWhileStopping(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.threadName not in _stopping
+
+
+logging.getLogger("uvicorn.error").addFilter(_QuietWhileStopping())
 
 
 class McpServer:
@@ -42,6 +61,8 @@ class McpServer:
         port: int,
         token: str | None,
     ) -> None:
+        if token is None and not _is_loopback(host):
+            raise ValueError(f"serving on {host}, beyond loopback, needs a token")
         family, _, _, _, address = socket.getaddrinfo(
             host, port, type=socket.SOCK_STREAM
         )[0]
@@ -82,14 +103,31 @@ class McpServer:
             time.sleep(0.01)
 
     def stop(self) -> None:
-        """Shut the server down and free its port; later calls do nothing."""
+        """Shut the server down and free its port; later calls do nothing.
+
+        Calls still running after a grace of 2 s are cut off: their
+        clients get an error, while the sandbox finishes the command.
+        """
         with self._stop_lock:
             if self._stopped:
                 return
             self._stopped = True
-            self._server.should_exit = True
-            self._thread.join()
+            _stopping.add(self._thread.name)
+            try:
+                self._server.should_exit = True
+                self._thread.join()
+            finally:
+                _stopping.discard(self._thread.name)
             self._socket.close()
+
+
+def _is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 def _app(tools: Callable[[], list[Tool]]) -> Server[Any]:
