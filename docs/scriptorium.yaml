@@ -22,6 +22,7 @@ files:
   - chapters/10-the-shell.md
   - chapters/11-testing-with-bash.md
   - chapters/20-architecture.md
+  - chapters/21-security.md
 
 outputs:
   site:
