@@ -361,5 +361,5 @@ sb.close()
 
 - [Images](showing-the-model-images.html): host commands that hand images back, and `show`.
 - [Your own loop](your-own-agent-loop.html): hand `sb.tools()` to a model.
-- [Adding a command](22-adding-a-command.md): write a command inside the shell
+- [Adding a command](adding-a-command-to-the-shell.html): write a command inside the shell
   instead of in the host.
