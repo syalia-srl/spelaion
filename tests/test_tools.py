@@ -124,7 +124,7 @@ def test_edit_and_write_descriptions(sb: Sandbox) -> None:
     )
     assert tools["write"].description == (
         "Create the file at path, or replace all of it, with content. "
-        "Parent folders must exist."
+        "Missing parent folders are created."
     )
 
 
@@ -171,3 +171,8 @@ def test_images_come_through(sb: Sandbox, rw: Path) -> None:
     assert [(a.mime, a.data) for a in out.images] == [
         ("image/png", PNG_FIXTURE.read_bytes())
     ]
+
+
+def test_write_creates_parent_folders(sb: Sandbox, rw: Path) -> None:
+    assert by_name(sb)["write"].fn(path="a/b/c.txt", content="x").text == ""
+    assert (rw / "a" / "b" / "c.txt").read_text() == "x"
