@@ -24,7 +24,7 @@ a builtin or a virtual command, then a host command the product registered.
 Nothing else is found, and the shell answers `spelaion: name: command not
 found` with exit code 127. That is why `bash -c`, `curl` and `git` are not
 here: they are host binaries, and no tier starts one. [Host
-commands](05-host-commands.md) add a name from the product's side, and
+commands](giving-the-agent-powers-with-host-commands.html) add a name from the product's side, and
 [Adding a command](22-adding-a-command.md) adds one to spelaion itself.
 
 The parser accepts a fixed grammar and reports anything outside it as
@@ -106,7 +106,7 @@ print("exit code:", r.exit_code)
 ```
 
 The in-memory `Bash` class has a writable in-memory filesystem, so it runs
-the line; [Testing with bash](11-testing-with-bash.md) covers that class.
+the line; [Testing with bash](testing-shell-scripts-with-bash.html) covers that class.
 The README lists process substitution as supported, so treat the sandbox
 failure as a bug to watch.
 
@@ -303,7 +303,7 @@ These report fixed virtual values, not the host's:
 | `python3` | The same interpreter. |
 
 Without `python=True`, both answer `<name>: not available in this sandbox`
-with exit code 127. [Python](04-python.md) covers what the guest can
+with exit code 127. [Python](running-python-in-the-sandbox.html) covers what the guest can
 reach.
 
 ## Builtins
@@ -439,7 +439,7 @@ print(r.stdout, end="")
 
 `sleep` is interrupted and reports 124. `seq` produces all 200000 lines,
 because the deadline is checked between commands and not inside `seq`.
-[Limits](03-limits.md) covers the call's own deadline.
+[Limits](bounding-every-call.html) covers the call's own deadline.
 
 ### bash -c and sh -c are not commands
 
@@ -509,7 +509,7 @@ for name in ("curl", "pip", "git"):
 ```
 
 All three answer `command not found` with exit code 127. The network is
-absent by design, not by a missing command. [Security](21-security.md)
+absent by design, not by a missing command. [Security](the-security-model.html)
 explains what the child can reach.
 
 ## The battery
@@ -548,6 +548,6 @@ shutil.rmtree(work)
 
 A row with 0 says the line ran. A row with 127 says the agent will not
 find that name, and the gaps above say what a line does when it parses but
-does less than bash. [Testing with bash](11-testing-with-bash.md) turns
-this kind of check into a test, and [Bounding every call](03-limits.md)
+does less than bash. [Testing with bash](testing-shell-scripts-with-bash.html) turns
+this kind of check into a test, and [Bounding every call](bounding-every-call.html)
 sets the deadline and the output cap the shell runs under.

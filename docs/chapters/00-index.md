@@ -25,7 +25,7 @@ mounts.
 
 ## How this book is organised
 
-The [Quick Start](01-quick-start.md) gives an agent a folder and runs its
+The [Quick Start](quick-start.html) gives an agent a folder and runs its
 first commands. The User Guide then takes one job per chapter, from mounting
 folders to running Claude Code with nothing but these tools. The Developer
 Guide shows how the shell is built and how to add a command to it.
