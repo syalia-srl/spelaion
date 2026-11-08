@@ -283,10 +283,21 @@ def test_host_request_is_served(sb: Sandbox) -> None:
     sb._restart()  # pyright: ignore[reportPrivateUsage]
     r = sb.bash("echo in | greet a b; echo rc=$?")
     assert r.stdout == "hello a b\nrc=3\n"
-    assert seen == [("greet", ["a", "b"], "in\n", "/scratch", {})]
+    # The live cwd and exported variables, after cd and export in the call.
+    sb.bash("mkdir sub && cd sub && export X=1 && greet")
+    assert seen == [
+        ("greet", ["a", "b"], "in\n", "/scratch", {}),
+        ("greet", [], "", "/scratch/sub", {"X": "1"}),
+    ]
 
 
 def test_host_error_comes_back_as_result(sb: Sandbox) -> None:
+    def serve(
+        name: str, args: list[str], stdin: str, cwd: str, env: dict[str, str]
+    ) -> Result:
+        raise RuntimeError("a bug in spelaion")
+
+    sb._serve_host = serve  # pyright: ignore[reportPrivateUsage]
     sb._host_names = {"greet"}  # pyright: ignore[reportPrivateUsage]
     sb._restart()  # pyright: ignore[reportPrivateUsage]
     r = sb.bash("greet")

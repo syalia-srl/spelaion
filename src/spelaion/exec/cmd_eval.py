@@ -265,7 +265,7 @@ class CommandEvaluator:
             case "builtin":
                 result = self._dispatch_builtin(cmd_name, cmd_args, io)
             case "agent_tool":
-                result = dispatch_tool(cmd_name, cmd_args, self.tools, io)
+                result = dispatch_tool(cmd_name, cmd_args, self.tools, io, self.state)
             case _:
                 io.stderr.write(f"spelaion: {cmd_name}: command not found\n")
                 result = CommandResult(exit_code=127)
