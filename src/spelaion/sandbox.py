@@ -6,6 +6,7 @@ import contextlib
 import logging
 import os
 import pickle
+import posixpath
 import re
 import socket
 import subprocess
@@ -526,7 +527,16 @@ def _stop_child(process: subprocess.Popen[bytes], conn: Connection) -> None:
 
 
 def _check_mounts(mounts: list[Mount]) -> None:
-    """Every host folder exists, and no host folder lies inside another."""
+    """Every host folder exists, no host folder lies inside another, and no
+    two mounts share a sandbox path."""
+    paths: dict[str, Mount] = {}
+    for m in mounts:
+        path = posixpath.normpath("/" + m.path.lstrip("/"))
+        if path in paths:
+            raise ValueError(
+                f"mounts {paths[path].path} and {m.path} have the same sandbox path"
+            )
+        paths[path] = m
     hosts: list[tuple[Mount, Path]] = []
     for m in mounts:
         host = Path(m.host).resolve()
