@@ -267,9 +267,15 @@ would go through the writable `/project` mount and never meet the read-only
 `/secret`, so the pair is refused. The messages name the host folder; the
 blocks replace the temporary root with `<root>` to keep the output short.
 
-The check compares host folders only. Two mounts at the same sandbox path are
-accepted. The first one in the list answers every path under it, and the second
-folder is unreachable.
+Two mounts at the same sandbox path raise `ValueError` too, since only one of
+the two folders could answer there:
+
+```{python continue export=examples/mounts.py}
+try:
+    Sandbox([Mount("/project", host=project), Mount("/project/", host=drafts)])
+except ValueError as e:
+    print(e)
+```
 
 A `cwd` that is not an absolute path to a folder the sandbox can see raises
 `ValueError`, with `cwd /nowhere is not an absolute path to a folder`.
