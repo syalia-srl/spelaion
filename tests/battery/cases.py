@@ -200,6 +200,8 @@ CASES: list[Case] = [
         "cd /project && wc -l plan.yaml nope words.txt; echo rc=$?",
     ),
     Case("PIPESTATUS", "true | false | true; echo ${PIPESTATUS[@]}"),
+    Case("! pipeline", "! false | true; echo $? ${PIPESTATUS[@]}"),
+    Case("! command", "! grep -q zzz /project/plan.yaml && echo absent"),
     Case("sleep short", "sleep 0.1; echo slept"),
     # python with the bundled PyYAML.
     Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
