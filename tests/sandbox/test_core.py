@@ -519,3 +519,19 @@ def test_sleep_is_bounded_by_the_deadline(rw: Path) -> None:
         r = sb.bash("sleep inf")
         assert r.timed_out and r.exit_code == 124
         assert sb.bash("sleep 0.1 && echo ok").stdout == "ok\n"
+
+
+@pytest.mark.parametrize(
+    ("code", "status", "stderr"),
+    [(None, 0, ""), (3, 3, ""), (256 + 7, 7, ""), ("bad input", 1, "bad input\n")],
+)
+def test_system_exit_maps_like_python(
+    rw: Path, monkeypatch: pytest.MonkeyPatch, code: object, status: int, stderr: str
+) -> None:
+    def leave(*_: object) -> None:
+        raise SystemExit(code)
+
+    monkeypatch.setattr("spelaion._shell.Executor.execute_node", leave)
+    shell = Shell([Mount("/scratch", rw)], "/scratch", {}, Limits())
+    r = shell.call("bash", {"command": "true"})
+    assert (r.exit_code, r.stderr) == (status, stderr)
