@@ -226,6 +226,10 @@ class TimeoutExpired(Exception):
     """``state.deadline`` has passed: unwind to the ``timeout`` that set it."""
 
 
+class LoopLimit(Exception):
+    """A loop ran past ``max_loop_iterations``: unwind to end the script."""
+
+
 @dataclass
 class ShellState:
     """Runtime state for a single shell session.

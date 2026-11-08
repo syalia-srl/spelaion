@@ -38,11 +38,15 @@ class PolicyConfig:
         rules: Ordered list of policy rules.
         max_recursion_depth: Maximum recursion depth for function calls.
         max_output_bytes: Maximum bytes of captured stdout/stderr.
+        max_loop_iterations: When set, a loop that runs more times stops
+            the whole script with status 1. When None, a loop stops after
+            ``max_recursion_depth * 10`` iterations and the script goes on.
     """
 
     rules: list[PolicyRule] = field(default_factory=lambda: [])
     max_recursion_depth: int = 50
     max_output_bytes: int = 1_000_000  # 1 MB
+    max_loop_iterations: int | None = None
 
     def add_rule(self, rule: PolicyRule) -> None:
         """Append a rule to the end of the rule list."""
