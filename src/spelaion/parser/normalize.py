@@ -230,7 +230,10 @@ def _normalize_simple_command(
             redirections.append(_normalize_redirection(child, source, diagnostics))
         else:
             # command_name, word, string, concatenation, expansion, etc.
-            words.append(_normalize_word_node(child, source))
+            word = _normalize_word_node(child, source)
+            if words and words[-1].span.end_byte == child.start_byte:
+                word = _join_words(words.pop(), word)
+            words.append(word)
 
     return SimpleCommand(
         words=tuple(words),
@@ -238,6 +241,32 @@ def _normalize_simple_command(
         redirections=tuple(redirections),
         span=_span(node),
     )
+
+
+def _join_words(first: Word, second: Word) -> Word:
+    """Two nodes with nothing between them, as one word.
+
+    tree-sitter-bash parses ``$1-$2`` as ``$1-$`` and a separate ``2``.
+    """
+    segments = list(first.segments)
+    rest = list(second.segments)
+    last = segments[-1] if segments else None
+    head = rest[0] if rest else None
+    if (
+        isinstance(last, LiteralSegment)
+        and last.value.endswith("$")
+        and isinstance(head, LiteralSegment)
+        and head.value[:1].isdigit()
+    ):
+        # $12 is ${1}2.
+        segments[-1] = LiteralSegment(value=last.value[:-1])
+        rest[0] = LiteralSegment(value=head.value[1:])
+        segments.append(ParameterExpansionSegment(name=head.value[0]))
+    joined = [seg for seg in segments + rest if seg != LiteralSegment(value="")]
+    span = replace(
+        first.span, end_byte=second.span.end_byte, end_point=second.span.end_point
+    )
+    return Word(segments=tuple(joined), span=span)
 
 
 def _normalize_assignment(
