@@ -168,14 +168,17 @@ class CommandEvaluator:
 
             stages = [make_stage(cmd) for cmd in node.commands]
             stdin_text = io.stdin.read() if io.stdin else ""
+            statuses: list[int] = []
             result = execute_pipeline(
                 stages,
                 input_text=stdin_text,
                 pipefail=self.state.options.pipefail,
                 stderr=io.stderr,
+                statuses=statuses,
             )
             if result.stdout:
                 io.stdout.write(result.stdout)
+            self.state.set_array("PIPESTATUS", [str(c) for c in statuses])
 
         if node.negated:
             result = CommandResult(
@@ -280,6 +283,7 @@ class CommandEvaluator:
             result = CommandResult(exit_code=1)
         self._restore_vars_if_temporary(node, saved_vars)
         self.state.last_status = result.exit_code
+        self.state.set_array("PIPESTATUS", [str(result.exit_code)])
         return result
 
     def _handle_subscript_assignment(self, assign: AssignmentWord) -> bool:
