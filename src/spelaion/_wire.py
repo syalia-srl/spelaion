@@ -9,6 +9,8 @@ All are picklable tuples. Before them, the parent sends the child its
 - ``("host", name, args, stdin, cwd, env)``, child to parent: run the host
   command *name* in the parent.
 - ``("host_result", result)``, parent to child: the host command's Result.
+- ``("register", name)``, parent to child, between calls: a host command
+  registered after the child started.
 - ``("done", result)``, child to parent: the call's Result.
 """
 
@@ -23,8 +25,9 @@ Host = tuple[Literal["host"], str, list[str], str, str, dict[str, str]]
 HostResult = tuple[Literal["host_result"], Result]
 Done = tuple[Literal["done"], Result]
 Ready = tuple[Literal["ready"]]
+Register = tuple[Literal["register"], str]
 
-ToChild = Call | HostResult
+ToChild = Call | HostResult | Register
 ToParent = Host | Done
 
 # Set in the parent's environment, it registers kill_self_for_test in the child.

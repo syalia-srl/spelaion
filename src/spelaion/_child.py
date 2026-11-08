@@ -97,6 +97,9 @@ def main(
             msg: ToChild = conn.recv()
         except EOFError:
             return
+        if msg[0] == "register":
+            shell.tools.register(msg[1], _HostProxy(msg[1], conn, shell))
+            continue
         if msg[0] != "call":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
         signal.setitimer(signal.ITIMER_REAL, limits.timeout_s + grace)
@@ -143,7 +146,11 @@ class _Python:
 
 
 class _HostProxy:
-    """Runs host command *name* in the parent and waits for its result."""
+    """Runs host command *name* in the parent and waits for its result.
+
+    The executor calls :meth:`invoke_in` with the calling shell's state, so
+    the parent sees the live cwd and exported variables.
+    """
 
     def __init__(self, name: str, conn: Connection, shell: Shell) -> None:
         self._name = name
@@ -155,14 +162,17 @@ class _HostProxy:
         return self._name
 
     def invoke(self, args: list[str], stdin: str | None = None) -> CommandResult:
-        request: Host = (
-            "host",
-            self._name,
-            list(args),
-            stdin or "",
-            self._shell.cwd,
-            dict(self._shell.env),
-        )
+        return self._send(args, stdin, self._shell.cwd, dict(self._shell.env))
+
+    def invoke_in(
+        self, state: ShellState, args: list[str], stdin: str | None = None
+    ) -> CommandResult:
+        return self._send(args, stdin, state.cwd, dict(state.exported_env))
+
+    def _send(
+        self, args: list[str], stdin: str | None, cwd: str, env: dict[str, str]
+    ) -> CommandResult:
+        request: Host = ("host", self._name, list(args), stdin or "", cwd, env)
         self._conn.send(request)
         msg = self._conn.recv()
         if msg[0] != "host_result":

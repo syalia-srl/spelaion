@@ -2,6 +2,7 @@
 
 __version__ = "0.1.0"
 
+from spelaion._host import HostContext, HostHandler
 from spelaion._types import Attachment, Limits, Result
 from spelaion.api.bash import (
     Bash,
@@ -18,6 +19,8 @@ __all__ = [
     "Bash",
     "CommandContext",
     "CustomCommand",
+    "HostContext",
+    "HostHandler",
     "Limits",
     "Mount",
     "Result",
