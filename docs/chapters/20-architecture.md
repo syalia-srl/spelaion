@@ -454,7 +454,7 @@ because the cache holds native code the next process loads.
   or run another command. Its module must be imported in `commands/__init__.py`,
   which is what registers it, and the name then enters `COMMANDS` and
   `BUILTIN_NAMES`. Add a case to `tests/battery` and a test.
-  [Adding a command](22-adding-a-command.md) walks through one.
+  [Adding a command](adding-a-command-to-the-shell.html) walks through one.
 - A shell builtin goes in `exec/builtins.py`, and its name must also be in
   `semantics.resolve._SHELL_BUILTINS`. The tables are separate: a name in
   `BUILTINS` but not in the resolution set is never found, and a name in the

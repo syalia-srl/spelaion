@@ -25,7 +25,7 @@ Nothing else is found, and the shell answers `spelaion: name: command not
 found` with exit code 127. That is why `bash -c`, `curl` and `git` are not
 here: they are host binaries, and no tier starts one. [Host
 commands](giving-the-agent-powers-with-host-commands.html) add a name from the product's side, and
-[Adding a command](22-adding-a-command.md) adds one to spelaion itself.
+[Adding a command](adding-a-command-to-the-shell.html) adds one to spelaion itself.
 
 The parser accepts a fixed grammar and reports anything outside it as
 `spelaion: syntax error` with exit code 2. It does not fall back to running
