@@ -295,4 +295,8 @@ def _run(
         if watch is not None:
             watch.stop()
     limit = None if watch is None else watch.out_limit
+    # RLIMIT_FSIZE can stop an output file before the watcher sees it; the
+    # bound is at most that cap, so a file at the bound reached either.
+    if limit is not None and max(_size(out_path), _size(err_path)) >= limit:
+        note, code = "python: output limit reached\n", 1
     return code, _read(out_path, limit), _read(err_path, limit) + note
