@@ -499,3 +499,10 @@ def test_one_bad_file_does_not_end_the_command(rw: Path, tmp_path: Path) -> None
         r = sb.bash("cp -r t t2; echo rc=$?; ls t2")
         assert r.stdout == "rc=1\na\nz\n"
         assert "secret" not in sb.bash("cat t2/* 2>&1").stdout
+
+
+def test_sleep_is_bounded_by_the_deadline(rw: Path) -> None:
+    with Sandbox([Mount("/s", rw)], cwd="/s", limits=Limits(timeout_s=1)) as sb:
+        r = sb.bash("sleep inf")
+        assert r.timed_out and r.exit_code == 124
+        assert sb.bash("sleep 0.1 && echo ok").stdout == "ok\n"

@@ -311,6 +311,10 @@
     "stdout": " 13 plan.yaml\n  6 words.txt\n 19 total\nrc=1\n",
     "exit_code": 0
   },
+  "PIPESTATUS": {
+    "stdout": "0 1 0\n",
+    "exit_code": 0
+  },
   "sleep short": {
     "stdout": "slept\n",
     "exit_code": 0

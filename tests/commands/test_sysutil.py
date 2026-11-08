@@ -4,7 +4,7 @@ seq, sleep, env, which, date, uname, whoami, id, yes, mktemp, comm.
 
 Covers:
 - seq: single arg, two args, three args, -s separator, -w padding
-- sleep: returns immediately with exit 0
+- sleep: sleeps for the given seconds (s, m, h, d suffixes)
 - env: prints exported vars; -u removes a var
 - which: finds builtins, virtual commands, not found
 - date: default output, +FORMAT, $SPELAION_DATE override
@@ -17,6 +17,8 @@ Covers:
 """
 
 from __future__ import annotations
+
+import time
 
 import pytest
 
@@ -183,28 +185,26 @@ class TestSeq:
 
 
 class TestSleep:
-    """Tests for the sleep command (virtual no-op)."""
+    """sleep sleeps; the call's deadline bounds it in a sandbox."""
 
-    def test_sleep_returns_zero(
-        self, state: ShellState, vfs: VirtualFilesystem
-    ) -> None:
+    def test_sleeps(self, state: ShellState, vfs: VirtualFilesystem) -> None:
         io = IOContext()
-        result = cmd_sleep(["1"], state, vfs, io)
+        start = time.monotonic()
+        result = cmd_sleep(["0.1", "0.05s"], state, vfs, io)
         assert result.exit_code == 0
-
-    def test_sleep_no_args(self, state: ShellState, vfs: VirtualFilesystem) -> None:
-        """sleep with no args still returns 0 (virtual)."""
-        io = IOContext()
-        result = cmd_sleep([], state, vfs, io)
-        assert result.exit_code == 0
-
-    def test_sleep_produces_no_output(
-        self, state: ShellState, vfs: VirtualFilesystem
-    ) -> None:
-        io = IOContext()
-        cmd_sleep(["10"], state, vfs, io)
+        assert time.monotonic() - start >= 0.15
         assert io.stdout.getvalue() == ""
-        assert io.stderr.getvalue() == ""
+
+    def test_no_args(self, state: ShellState, vfs: VirtualFilesystem) -> None:
+        io = IOContext()
+        assert cmd_sleep([], state, vfs, io).exit_code == 1
+        assert io.stderr.getvalue() == "sleep: missing operand\n"
+
+    @pytest.mark.parametrize("arg", ["x", "-1", "1q", "nan"])
+    def test_invalid(self, arg: str, state: ShellState, vfs: VirtualFilesystem) -> None:
+        io = IOContext()
+        assert cmd_sleep([arg], state, vfs, io).exit_code == 1
+        assert io.stderr.getvalue() == f"sleep: invalid time interval '{arg}'\n"
 
 
 # ---------------------------------------------------------------------------
