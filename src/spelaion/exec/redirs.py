@@ -27,6 +27,13 @@ class IOContext:
     executor: CommandEvaluator | None = None
 
 
+class RedirectionError(Exception):
+    """A redirection failed; its message is already on stderr.
+
+    Bash then skips the command and its status is 1.
+    """
+
+
 def apply_redirections(  # noqa: C901
     redirections: tuple[Redirection, ...],
     io_ctx: IOContext,
@@ -69,7 +76,10 @@ def apply_redirections(  # noqa: C901
                 data = vfs.read(abs_path)
                 io_ctx.stdin = StringIO(data.decode("utf-8", errors="replace"))
             except FileNotFoundError:
-                io_ctx.stderr.write(f"spelaion: {target_path}: No such file\n")
+                io_ctx.stderr.write(
+                    f"spelaion: {target_path}: No such file or directory\n"
+                )
+                raise RedirectionError(target_path) from None
         elif op == ">":
             buf = VFSWriteBuffer(vfs, abs_path, append=False)
             if fd == 2:

@@ -19,7 +19,12 @@ from spelaion.ast.nodes import Redirection, Word
 from spelaion.ast.spans import Point, Span
 from spelaion.ast.words import LiteralSegment
 from spelaion.exec.pipelines import execute_pipeline
-from spelaion.exec.redirs import IOContext, VFSWriteBuffer, apply_redirections
+from spelaion.exec.redirs import (
+    IOContext,
+    RedirectionError,
+    VFSWriteBuffer,
+    apply_redirections,
+)
 from spelaion.exec.tool_dispatch import dispatch_tool
 from spelaion.runtime.result import CommandResult
 from spelaion.runtime.state import ShellState
@@ -399,9 +404,10 @@ class TestApplyRedirectionsInputFromFile:
     ) -> None:
         io = IOContext()
         redir = _redir("<", "/nonexistent.txt")
-        result_io = apply_redirections((redir,), io, state, vfs)
-        stderr_output = result_io.stderr.getvalue()
-        assert "No such file" in stderr_output
+        with pytest.raises(RedirectionError):
+            apply_redirections((redir,), io, state, vfs)
+        stderr_output = io.stderr.getvalue()
+        assert "No such file or directory" in stderr_output
         assert "/nonexistent.txt" in stderr_output
 
 
