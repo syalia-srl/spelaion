@@ -13,6 +13,7 @@ files:
   - chapters/01-quick-start.md
   - chapters/02-mounts.md
   - chapters/03-limits.md
+  - chapters/04-python.md
 
 outputs:
   site:
