@@ -15,6 +15,7 @@ files:
   - chapters/03-limits.md
   - chapters/04-python.md
   - chapters/05-host-commands.md
+  - chapters/06-images.md
 
 outputs:
   site:
