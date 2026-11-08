@@ -17,7 +17,7 @@ EDIT_DESCRIPTION = (
 
 WRITE_DESCRIPTION = (
     "Create the file at path, or replace all of it, with content. "
-    "Parent folders must exist."
+    "Missing parent folders are created."
 )
 
 
