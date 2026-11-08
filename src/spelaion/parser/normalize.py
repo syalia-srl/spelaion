@@ -900,9 +900,7 @@ def _redirect_last(
             span=span,
         )
     if isinstance(inner, AndOrList | Pipeline) and inner.commands:
-        last = _redirect_last(
-            inner.commands[-1], redirs, inner.commands[-1].span, args
-        )
+        last = _redirect_last(inner.commands[-1], redirs, inner.commands[-1].span, args)
         return replace(inner, commands=(*inner.commands[:-1], last))
     return RedirectedCommand(body=inner, redirections=redirs, span=span)
 
