@@ -14,6 +14,7 @@ files:
   - chapters/02-mounts.md
   - chapters/03-limits.md
   - chapters/04-python.md
+  - chapters/05-host-commands.md
 
 outputs:
   site:
