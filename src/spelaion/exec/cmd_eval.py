@@ -206,22 +206,7 @@ class CommandEvaluator:
     def _execute_simple_command(
         self, node: SimpleCommand, io: IOContext
     ) -> CommandResult:
-        # Handle prefix assignments
-        saved_vars: dict[str, str | None] = {}
-        for assign in node.assignments:
-            if isinstance(assign, ArrayAssignmentWord):
-                values: list[str] = []
-                for val_word in assign.values:
-                    values.extend(self.word_ev.eval_word(val_word))
-                self.state.set_array(assign.name, values)
-                continue
-            if self._handle_subscript_assignment(assign):
-                continue
-            value = ""
-            if assign.value is not None:
-                value = self.word_ev.eval_word_single(assign.value)
-            saved_vars[assign.name] = self.state.get_var(assign.name)
-            self.state.set_var(assign.name, value)
+        saved_vars, saved_exports = self._assign_prefixes(node)
 
         # If no words, assignments are permanent
         if not node.words:
@@ -255,7 +240,7 @@ class CommandEvaluator:
                 io.stdout is not saved_stdout,
                 io.stderr is not saved_stderr,
             )
-            self._restore_vars_if_temporary(node, saved_vars)
+            self._restore_vars_if_temporary(node, saved_vars, saved_exports)
             self.state.last_status = 1
             self.state.set_array("PIPESTATUS", ["1"])
             return CommandResult(exit_code=1)
@@ -276,7 +261,7 @@ class CommandEvaluator:
                 stdout_redirected,
                 stderr_redirected,
             )
-            self._restore_vars_if_temporary(node, saved_vars)
+            self._restore_vars_if_temporary(node, saved_vars, saved_exports)
             self.state.last_status = result.exit_code
             return result
 
@@ -303,7 +288,7 @@ class CommandEvaluator:
             stderr_redirected,
         ):
             result = CommandResult(exit_code=1)
-        self._restore_vars_if_temporary(node, saved_vars)
+        self._restore_vars_if_temporary(node, saved_vars, saved_exports)
         self.state.last_status = result.exit_code
         self.state.set_array("PIPESTATUS", [str(result.exit_code)])
         return result
@@ -643,8 +628,40 @@ class CommandEvaluator:
     # Utilities
     # ------------------------------------------------------------------
 
+    def _assign_prefixes(
+        self, node: SimpleCommand
+    ) -> tuple[dict[str, str | None], dict[str, str | None]]:
+        """Run *node*'s assignments; return the values and exports they replaced.
+
+        Before a command they are in its environment too, as in bash.
+        """
+        saved_vars: dict[str, str | None] = {}
+        saved_exports: dict[str, str | None] = {}
+        for assign in node.assignments:
+            if isinstance(assign, ArrayAssignmentWord):
+                values: list[str] = []
+                for val_word in assign.values:
+                    values.extend(self.word_ev.eval_word(val_word))
+                self.state.set_array(assign.name, values)
+                continue
+            if self._handle_subscript_assignment(assign):
+                continue
+            value = ""
+            if assign.value is not None:
+                value = self.word_ev.eval_word_single(assign.value)
+            saved_vars[assign.name] = self.state.get_var(assign.name)
+            if node.words:
+                exported = self.state.exported_env
+                saved_exports.setdefault(assign.name, exported.get(assign.name))
+                exported[assign.name] = value
+            self.state.set_var(assign.name, value)
+        return saved_vars, saved_exports
+
     def _restore_vars_if_temporary(
-        self, node: SimpleCommand, saved_vars: dict[str, str | None]
+        self,
+        node: SimpleCommand,
+        saved_vars: dict[str, str | None],
+        saved_exports: dict[str, str | None],
     ) -> None:
         if node.words and saved_vars:
             for name, old_val in saved_vars.items():
@@ -652,6 +669,11 @@ class CommandEvaluator:
                     self.state.scope.unset(name)
                 else:
                     self.state.set_var(name, old_val)
+        for name, old_export in saved_exports.items():
+            if old_export is None:
+                self.state.exported_env.pop(name, None)
+            else:
+                self.state.exported_env[name] = old_export
 
     def _finalize_io(
         self,
