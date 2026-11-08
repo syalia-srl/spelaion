@@ -56,6 +56,7 @@ def cmd_head(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     n = 10
+    nbytes: int | None = None
     files: list[str] = []
     i = 0
     while i < len(args):
@@ -66,6 +67,10 @@ def cmd_head(
                 io.stderr.write(f"head: invalid number of lines: {args[i + 1]!r}\n")
                 return CommandResult(exit_code=1)
             i += 2
+        elif _is_byte_count(args, i):
+            nbytes, i = _byte_count(args, i, "head", io)
+            if nbytes is None:
+                return CommandResult(exit_code=1)
         elif args[i].startswith("-") and args[i][1:].isdigit():
             n = int(args[i][1:])
             i += 1
@@ -85,10 +90,36 @@ def cmd_head(
             continue
         if len(files) > 1:
             first = _header(f, first, io)
+        if nbytes is not None:
+            io.stdout.write(_bytes(content.encode()[:nbytes]))
+            continue
         lines = content.splitlines(keepends=True)
         io.stdout.write("".join(lines[:n]))
 
     return CommandResult(exit_code=exit_code)
+
+
+def _is_byte_count(args: list[str], i: int) -> bool:
+    """``-c N`` or ``-cN`` at *args[i]*."""
+    a = args[i]
+    return (a == "-c" and i + 1 < len(args)) or (a.startswith("-c") and a != "-c")
+
+
+def _byte_count(
+    args: list[str], i: int, name: str, io: IOContext
+) -> tuple[int | None, int]:
+    """The N of ``-c N`` or ``-cN`` at *args[i]*, and the index after it."""
+    value, after = (args[i + 1], i + 2) if args[i] == "-c" else (args[i][2:], i + 1)
+    try:
+        return int(value), after
+    except ValueError:
+        io.stderr.write(f"{name}: invalid number of bytes: {value!r}\n")
+        return None, after
+
+
+def _bytes(data: bytes) -> str:
+    # Pipes carry text: a character cut in half by the count is dropped.
+    return data.decode("utf-8", errors="ignore")
 
 
 @command("tail")
@@ -96,11 +127,16 @@ def cmd_tail(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
     n = 10
+    nbytes: int | None = None
     from_start = False
     files: list[str] = []
     i = 0
     while i < len(args):
-        if args[i] == "-n" and i + 1 < len(args):
+        if _is_byte_count(args, i):
+            nbytes, i = _byte_count(args, i, "tail", io)
+            if nbytes is None:
+                return CommandResult(exit_code=1)
+        elif args[i] == "-n" and i + 1 < len(args):
             val = args[i + 1]
             if val.startswith("+"):
                 from_start = True
@@ -127,6 +163,11 @@ def cmd_tail(
             continue
         if len(files) > 1:
             first = _header(f, first, io)
+        if nbytes is not None:
+            data = content.encode()
+            start = max(len(data) - nbytes, 0) if nbytes else len(data)
+            io.stdout.write(_bytes(data[start:]))
+            continue
         lines = content.splitlines(keepends=True)
         if from_start:
             # +N means starting from line N (1-indexed)
