@@ -36,7 +36,9 @@ OpenCode 2.1.2. Codex, pi and Cursor are not contained yet and aegis refuses
 them in that mode.
 
 Run spelaion through aegis to get that recipe kept for you. Without aegis,
-the Claude Code recipe below is the same one.
+the Claude Code recipe below follows the same rules: its own tools off, a
+strict MCP config, an isolated config folder and an empty working folder.
+It lets the MCP calls run with `--allowedTools` where aegis uses a hook.
 
 ## Claude Code without aegis
 
