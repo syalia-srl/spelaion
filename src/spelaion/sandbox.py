@@ -157,7 +157,11 @@ class Sandbox:
         the host commands registered when this is called.
         """
         description = describe_bash(
-            self._mounts, self._cwd, self.python, list(self._handlers)
+            self._mounts,
+            self._cwd,
+            self.python,
+            list(self._handlers),
+            self.limits.timeout_s,
         )
         return make_tools(self.bash, self.edit, self.write, description)
 
