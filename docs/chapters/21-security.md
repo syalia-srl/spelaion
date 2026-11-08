@@ -22,7 +22,7 @@ processes are absent, not hidden behind a permission check that some command
 might skip. The shell is a Python interpreter that parses bash and evaluates
 its own tree; it has no function that starts a program. `python` is CPython
 built for WASI and run under wasmtime, and WASI has no socket and no process to
-grant. [python](04-python.md) and [host commands](05-host-commands.md) cover
+grant. [python](running-python-in-the-sandbox.html) and [host commands](giving-the-agent-powers-with-host-commands.html) cover
 those two entry points.
 
 The mount table is the part every entry point shares, though not every entry
@@ -34,7 +34,7 @@ normalises the path lexically, so `..` stops at `/`; takes the longest mount
 point that prefixes the result; follows a symlink and refuses a target outside
 that mount. A path outside every mount does not exist, and a write also rejects
 a `readonly` mount and a writable mount over its disk cap.
-[Giving the agent folders](02-mounts.md) describes the mount table itself.
+[Giving the agent folders](giving-the-agent-folders.html) describes the mount table itself.
 
 ## The child process
 
@@ -42,7 +42,7 @@ Each sandbox runs its shell and python in a child Python process. A call past
 its deadline kills that child, and the next call starts a fresh one; an rlimit
 caps the child's memory; the output cap and the disk cap bound what one call
 can print and what the writable mounts can hold. A runaway command returns an
-error and the product stays up. [Bounding every call](03-limits.md) has the
+error and the product stays up. [Bounding every call](bounding-every-call.html) has the
 numbers and how each bound is enforced.
 
 The child is not a kernel sandbox. It runs as the product's user, with that
@@ -266,7 +266,7 @@ product's permissions. `ctx.path()` is a convenience that applies the mount
 table, not a restriction on the handler: a handler that opens a host path
 directly reads it. Register only handlers you would run yourself, and do not
 pass an agent-chosen string to `open` without `ctx.path()`.
-[host commands](05-host-commands.md) shows how to write one.
+[host commands](giving-the-agent-powers-with-host-commands.html) shows how to write one.
 
 The child is not a kernel sandbox, as the model above says. It runs as the
 product's user, so the host's own access controls still apply: a kernel bug,
@@ -275,7 +275,7 @@ is outside what the mount table addresses.
 
 The in-memory `Bash` class is a test tool with none of these limits: no mount
 table, no child process and no deadline, only the interpreter's own loop and
-recursion caps. Do not give it to a model. [Testing with bash](11-testing-with-bash.md)
+recursion caps. Do not give it to a model. [Testing with bash](testing-shell-scripts-with-bash.html)
 uses it for the shell's own tests.
 
 ## Reporting a vulnerability

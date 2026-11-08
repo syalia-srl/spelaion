@@ -4,7 +4,7 @@ A product agent answers questions about a user's project and must not change
 it. spelaion already gives the model that project: `bash`, `edit` and `write`
 over a read-only mount, and nothing else on the machine. What is missing is
 the program that drives the model. You could write that loop yourself, as
-[Your own loop](07-own-loop.md) does, but Claude Code and OpenCode already do
+[Your own loop](your-own-agent-loop.html) does, but Claude Code and OpenCode already do
 it: they send the conversation to a model, read the tool calls it asks for,
 run them and stop when it answers. You want one of them to drive, with
 spelaion's three tools as its whole reach.
@@ -46,7 +46,7 @@ runs afterwards, from a shell.
 
 The project is mounted read-only, so the model can read it and a write from
 the model is refused by the mount. The mount, not the harness's behaviour,
-decides what the agent may change; [Giving the agent folders](02-mounts.md)
+decides what the agent may change; [Giving the agent folders](giving-the-agent-folders.html)
 covers the difference between the two kinds of mount.
 
 ```{python export=examples/harnesses.py}
@@ -274,8 +274,8 @@ and provider and login variables survive.
 
 ## Where to go next
 
-- [MCP](08-mcp.md): the server behind these tools, its tool list and its
+- [MCP](serving-the-tools-over-mcp.html): the server behind these tools, its tool list and its
   authentication.
-- [Bounding every call](03-limits.md): the deadline, memory and output caps
+- [Bounding every call](bounding-every-call.html): the deadline, memory and output caps
   that apply to the harness's calls too.
-- [Your own loop](07-own-loop.md): the same three tools without a harness.
+- [Your own loop](your-own-agent-loop.html): the same three tools without a harness.

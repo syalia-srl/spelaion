@@ -304,7 +304,7 @@ print(bash.description.split("Extra commands: ")[1])
 `show` comes first because it is a host command too, the built-in one that
 hands images back. A tool list built before a later registration does not
 update itself; call `sb.tools()` again to get a fresh description. That is what
-matters for [your own loop](07-own-loop.md) and for [MCP](08-mcp.md).
+matters for [your own loop](your-own-agent-loop.html) and for [MCP](serving-the-tools-over-mcp.html).
 
 ## A handler that runs too long
 
@@ -338,13 +338,13 @@ slow.close()
 The call takes about two seconds, not the one second in its limit, because the
 handler runs to its end before the parent notices. The result says exit 124 and
 `timed_out`, and the next call runs in a new child. [Bounding every
-call](03-limits.md) covers the other limits the same way.
+call](bounding-every-call.html) covers the other limits the same way.
 
 ## Images
 
 A handler can hand images back to the model with `ctx.attach()`, and the
 built-in `show` command does exactly that for files the agent names;
-[Images](06-images.md) takes the whole subject.
+[Images](showing-the-model-images.html) takes the whole subject.
 
 ## The finished program
 
@@ -359,7 +359,7 @@ sb.close()
 
 ## Where to go next
 
-- [Images](06-images.md): host commands that hand images back, and `show`.
-- [Your own loop](07-own-loop.md): hand `sb.tools()` to a model.
+- [Images](showing-the-model-images.html): host commands that hand images back, and `show`.
+- [Your own loop](your-own-agent-loop.html): hand `sb.tools()` to a model.
 - [Adding a command](22-adding-a-command.md): write a command inside the shell
   instead of in the host.
