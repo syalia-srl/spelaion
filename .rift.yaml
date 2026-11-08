@@ -45,7 +45,8 @@ rules:
     severity: warning
     extract:
       file: "src/spelaion/api/bash.py"
-      regex: '^    def ([a-z]\w*)\((?:self\b|$)'
+      # name() and invoke() belong to the internal wrapper around a custom command.
+      regex: '^    def ((?!(?:name|invoke)\b)[a-z]\w*)\((?:self\b|$)'
     require:
       in: "docs/chapters/*.md"
       as: word
