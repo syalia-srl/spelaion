@@ -20,7 +20,9 @@ def cmd_ls(  # noqa: C901
 ) -> CommandResult:
     long_fmt = False
     show_all = False
-    one_per_line = False
+    # Output to a pipe, which is all an agent has, is one name per line in
+    # GNU ls; -C asks for the columns a terminal would get.
+    one_per_line = True
     recursive = False
     paths: list[str] = []
 
@@ -33,6 +35,8 @@ def cmd_ls(  # noqa: C901
                     show_all = True
                 elif ch == "1":
                     one_per_line = True
+                elif ch == "C":
+                    one_per_line = False
                 elif ch == "R":
                     recursive = True
         else:
@@ -52,7 +56,7 @@ def cmd_ls(  # noqa: C901
             continue
 
         if vfs.is_file(abs_path):
-            _ls_print_entry(abs_path, posixpath.basename(abs_path), long_fmt, vfs, io)
+            _ls_print_entry(abs_path, p, long_fmt, vfs, io)
             continue
 
         if show_header:
