@@ -35,6 +35,8 @@ around a sandbox.
   `env`, `python3` and host commands see it.
 - `head -c N` and `tail -c N` count bytes.
 - Two mounts at the same sandbox path are refused.
+- python works from a cache shared by machines with different CPUs: the
+  compiled module's name carries a hash of the CPU's features.
 - Redirections: `/dev/null`, a missing `<` file, each buffer written once,
   and stderr kept for every pipeline stage.
 - Globs match one path component at a time and keep leading folders as
