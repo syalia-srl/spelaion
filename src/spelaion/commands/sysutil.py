@@ -6,6 +6,7 @@ seq, sleep, env, which, date, uname, whoami, id, yes, mktemp, comm.
 from __future__ import annotations
 
 import datetime
+import time
 import uuid
 from typing import TYPE_CHECKING
 
@@ -82,7 +83,23 @@ def cmd_seq(
 def cmd_sleep(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
-    # Virtual no-op — returns immediately
+    # Sleeps for real: the call's deadline, which kills the child, bounds it.
+    units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    total = 0.0
+    for a in args:
+        number, unit = (a[:-1], a[-1]) if a[-1:] in units else (a, "s")
+        try:
+            seconds = float(number) * units[unit]
+        except ValueError:
+            seconds = -1.0
+        if not seconds >= 0:
+            io.stderr.write(f"sleep: invalid time interval '{a}'\n")
+            return CommandResult(exit_code=1)
+        total += seconds
+    if not args:
+        io.stderr.write("sleep: missing operand\n")
+        return CommandResult(exit_code=1)
+    time.sleep(min(total, 365 * 86400))  # `sleep inf` overflows time.sleep
     return CommandResult(exit_code=0)
 
 

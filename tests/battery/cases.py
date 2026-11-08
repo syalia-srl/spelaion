@@ -172,12 +172,12 @@ CASES: list[Case] = [
     Case(
         "multi-file error",
         "cat /project/plan.yaml /nope | wc -l; echo rc=${PIPESTATUS[0]}",
-        gap="no PIPESTATUS",
     ),
     Case(
         "wc missing file",
         "cd /project && wc -l plan.yaml nope words.txt; echo rc=$?",
     ),
+    Case("PIPESTATUS", "true | false | true; echo ${PIPESTATUS[@]}"),
     Case("sleep short", "sleep 0.1; echo slept"),
     # python with the bundled PyYAML.
     Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
