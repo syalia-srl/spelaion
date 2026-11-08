@@ -415,6 +415,30 @@
     "stdout": "captured\n",
     "exit_code": 0
   },
+  "cat <(...)": {
+    "stdout": "hi\n",
+    "exit_code": 0
+  },
+  "diff <(...) <(...) same": {
+    "stdout": "same\n",
+    "exit_code": 0
+  },
+  "diff -u <(...) <(...)": {
+    "stdout": "@@ -1,2 +1,2 @@\n a\n-b\n+c\n",
+    "exit_code": 0
+  },
+  "wc -l < <(...)": {
+    "stdout": "2\n",
+    "exit_code": 0
+  },
+  "while read < <(...)": {
+    "stdout": "got q\n",
+    "exit_code": 0
+  },
+  "<(...) leaves no file": {
+    "stdout": "0\n",
+    "exit_code": 0
+  },
   "python -c": {
     "stdout": "45\n",
     "exit_code": 0

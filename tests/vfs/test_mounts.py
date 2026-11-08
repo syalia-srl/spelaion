@@ -409,3 +409,22 @@ def test_nul_in_path_is_einval(fs: MountFs) -> None:
         with pytest.raises(OSError) as e:
             call()
         assert e.value.errno == errno.EINVAL
+
+
+def test_procsub_pipe_lives_in_memory(fs: MountFs, tmp_path: Path) -> None:
+    before = sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*"))
+    fs.write("/dev/fd/procsub_1", b"hi\n")
+    assert fs.read("/dev/fd/procsub_1") == b"hi\n"
+    assert fs.is_file("/dev/fd/procsub_1")
+    assert sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*")) == before
+    assert fs.listdir("/") == ["project", "scratch"]
+    assert not fs.exists("/dev")
+    with pytest.raises(FileNotFoundError):
+        fs.host_path("/dev/fd/procsub_1")
+    fs.clear_pipes()
+    assert not fs.exists("/dev/fd/procsub_1")
+
+
+def test_only_procsub_names_are_pipes(fs: MountFs) -> None:
+    with pytest.raises(FileNotFoundError):
+        fs.write("/dev/fd/3", b"x")

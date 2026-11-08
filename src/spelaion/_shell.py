@@ -55,6 +55,14 @@ class Shell:
         return result
 
     def bash(self, command: str) -> Result:
+        # What ``<(...)`` printed lives for one call.
+        self.fs.clear_pipes()
+        try:
+            return self._bash(command)
+        finally:
+            self.fs.clear_pipes()
+
+    def _bash(self, command: str) -> Result:
         state = ShellState()
         state.cwd = self.cwd
         state.set_var("PWD", self.cwd)
