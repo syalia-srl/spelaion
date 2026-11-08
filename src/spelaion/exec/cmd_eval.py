@@ -512,7 +512,14 @@ class CommandEvaluator:
             node.redirections, io, self.state, self.vfs, self.cmdsub_hook
         )
         result = self.execute_node(node.body, io)
-        if not self._flush_redirects(io, saved_stderr):
+        if not self._flush_redirects(
+            [
+                b
+                for b, s in ((io.stdout, saved_stdout), (io.stderr, saved_stderr))
+                if b is not s
+            ],
+            saved_stderr,
+        ):
             result = CommandResult(exit_code=1)
         # Restore original streams
         io.stdin = saved_stdin
@@ -627,7 +634,10 @@ class CommandEvaluator:
     ) -> bool:
         """Flush redirections and restore streams; ``False`` if a write failed."""
         err = saved_stderr if saved_stderr is not None else io.stderr
-        flushed = self._flush_redirects(io, err)
+        # Only the files this command opened: an enclosing redirection
+        # flushes its own buffer once, when it ends.
+        mine = [io.stdout] * stdout_redirected + [io.stderr] * stderr_redirected
+        flushed = self._flush_redirects(mine, err)
         # Restore original streams so subsequent commands in the
         # sequence write to the parent IOContext, not the VFS buffer.
         if stdout_redirected and saved_stdout is not None:
@@ -637,9 +647,10 @@ class CommandEvaluator:
         return flushed
 
     @staticmethod
-    def _flush_redirects(io: IOContext, err: StringIO) -> bool:
+    def _flush_redirects(bufs: list[StringIO], err: StringIO) -> bool:
         """Write redirected output to its files; report a refused write on *err*."""
-        for buf in (io.stdout, io.stderr):
+        # ``>>f 2>&1`` puts one buffer on both streams: write it once.
+        for buf in dict.fromkeys(bufs):
             if isinstance(buf, VFSWriteBuffer):
                 try:
                     buf.flush_to_vfs()

@@ -171,6 +171,10 @@
     "stdout": "one\ntwo\n",
     "exit_code": 0
   },
+  "group >> and 2>&1": {
+    "stdout": "a\nb\nc\n",
+    "exit_code": 0
+  },
   "test -d && ||": {
     "stdout": "dir\n",
     "exit_code": 0
