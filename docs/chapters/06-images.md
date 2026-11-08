@@ -265,9 +265,9 @@ does it on the way out.
 
 ## Where to go next
 
-- [Host commands](05-host-commands.md): what a handler receives and what it may
+- [Host commands](giving-the-agent-powers-with-host-commands.html): what a handler receives and what it may
   do with it.
-- [Bounding every call](03-limits.md): the deadline, output and disk caps.
-- [Your own loop](07-own-loop.md): the tool call and the model message around
+- [Bounding every call](bounding-every-call.html): the deadline, output and disk caps.
+- [Your own loop](your-own-agent-loop.html): the tool call and the model message around
   it.
-- [MCP servers](08-mcp.md): serving these tools to Claude Code or OpenCode.
+- [MCP servers](serving-the-tools-over-mcp.html): serving these tools to Claude Code or OpenCode.

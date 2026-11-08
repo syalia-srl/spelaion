@@ -94,7 +94,7 @@ print("images:", [(image.mime, image.name, len(image.data)) for image in out.ima
 ```
 
 `show` prints nothing, so the text is empty and the image carries the result.
-An API call sends that image beside the text; [Images](06-images.md) covers
+An API call sends that image beside the text; [Images](showing-the-model-images.html) covers
 where the bytes come from.
 
 ## The description the model reads
@@ -111,14 +111,14 @@ print(by_name["bash"].description)
 It states the folders and whether each is read-only or read-write, the working
 directory, that each call starts a fresh shell, and what is absent: no network,
 no pip, no background processes, and python only when the sandbox has it
-([python](04-python.md)). It names the timeout from `Limits`, which is 20
+([python](running-python-in-the-sandbox.html)). It names the timeout from `Limits`, which is 20
 seconds here, and the host commands registered when the tools were built.
 Those are sandbox paths throughout; the host folder behind `/work` never
 appears, so the model cannot learn the host layout from the description.
 
 The timeout is a per-sandbox limit, and the description reports the number the
 sandbox was built with, so changing `Limits` changes what the model is told.
-[Bounding every call](03-limits.md) covers what happens when the deadline
+[Bounding every call](bounding-every-call.html) covers what happens when the deadline
 passes.
 
 ## Commands registered later
@@ -142,7 +142,7 @@ print(by_name["bash"].fn(command="word-count notes.md").text, end="")
 
 The `Tool` you already held keeps the old description. In a product that
 registers commands at startup or per request, build the list after the last
-registration. [Host commands](05-host-commands.md) explains what a handler is
+registration. [Host commands](giving-the-agent-powers-with-host-commands.html) explains what a handler is
 and why it runs on the host.
 
 ## The shape each API wants
@@ -188,7 +188,7 @@ print(json.dumps(openai_tools[0], indent=2))
 The model, the headers, the retries and the streaming are the product's
 business. spelaion supplies the three definitions and the functions behind
 them. If the model is reached through a harness instead, `sb.serve_mcp()`
-serves the same three tools over MCP; [MCP](08-mcp.md) takes that route.
+serves the same three tools over MCP; [MCP](serving-the-tools-over-mcp.html) takes that route.
 
 ## A loop with a stand-in for the model
 
@@ -285,9 +285,9 @@ lookup and call, and sends each result as a `role: tool` message with a
 
 ## Where to go next
 
-- [Mounts](02-mounts.md): read-only and writable folders, which the
+- [Mounts](giving-the-agent-folders.html): read-only and writable folders, which the
   description reports.
-- [Host commands](05-host-commands.md): the functions the agent calls as
+- [Host commands](giving-the-agent-powers-with-host-commands.html): the functions the agent calls as
   commands, and what they may reach.
-- [MCP](08-mcp.md): serve these three tools to a harness instead of writing
+- [MCP](serving-the-tools-over-mcp.html): serve these three tools to a harness instead of writing
   the loop.

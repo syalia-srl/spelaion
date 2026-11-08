@@ -5,7 +5,7 @@ must have one folder of its own to write drafts in. This chapter mounts both
 folders in one sandbox, shows what the agent sees at the root, and separates
 what lasts between calls from what does not.
 
-The [Quick Start](01-quick-start.md) gave the agent one writable folder. This
+The [Quick Start](quick-start.html) gave the agent one writable folder. This
 chapter adds a read-only one and shows what that prevents.
 
 ## Two mounts
@@ -139,7 +139,7 @@ that says whether the call worked.
 
 `Result` has two more fields. `timed_out` is true when the call reached its
 deadline, and `attachments` holds images a host command attached. The deadline
-and the other bounds are a `Limits` value; [Bounding every call](03-limits.md)
+and the other bounds are a `Limits` value; [Bounding every call](bounding-every-call.html)
 covers them.
 
 ## The project stays read-only
@@ -216,7 +216,7 @@ print(sb.bash("find /drafts/notes").stdout, end="")
 A successful `write` returns an empty `Result`: no stdout, no stderr, exit code
 0. The two missing folders were created. It will not create the host folder
 behind a mount, and it will not write past the disk cap, which
-[Bounding every call](03-limits.md) describes.
+[Bounding every call](bounding-every-call.html) describes.
 
 ## The host sees the same files
 
@@ -316,7 +316,7 @@ checks the two construction refusals, and closes the sandbox.
 
 ## Where to go next
 
-- [Bounding every call](03-limits.md): the deadline, the output cap and the
+- [Bounding every call](bounding-every-call.html): the deadline, the output cap and the
   disk cap that apply to these calls.
-- [Your own agent loop](07-own-loop.md): hand `bash`, `edit` and `write` to a
+- [Your own agent loop](your-own-agent-loop.html): hand `bash`, `edit` and `write` to a
   model and let it work.

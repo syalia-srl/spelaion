@@ -119,7 +119,7 @@ A snippet that sets a variable in one call and reads it in the next works
 under `Bash` and fails for an agent. That difference is part of what a test
 has to cover: if the agent runs each command as its own call, keep what the
 snippet needs inside one `run`, or test it with a `Sandbox` and a real folder,
-as [Giving the agent folders](02-mounts.md) shows.
+as [Giving the agent folders](giving-the-agent-folders.html) shows.
 
 ## Files from Python
 
@@ -192,7 +192,7 @@ shorter form for the common case.
 A custom command exists only in the `Bash` that registered it, and it runs in
 your process. That is the point for a test double, and it is not the same
 mechanism as the host commands a `Sandbox` gets, which
-[Host commands](05-host-commands.md) covers.
+[Host commands](giving-the-agent-powers-with-host-commands.html) covers.
 
 A test replaces the product's command with a recorder like this one. The test
 stays offline, and it can assert on the exact message the snippet tried to
@@ -259,8 +259,8 @@ project.
 
 Give the agent a `Sandbox`: it runs a child process over the folders you
 mount and enforces a deadline, a memory cap and caps on output and disk, as
-[Bounding every call](03-limits.md) describes. Expose it with `sb.tools()` in
-[Your own agent loop](07-own-loop.md). Keep `Bash` for the tests that check
+[Bounding every call](bounding-every-call.html) describes. Expose it with `sb.tools()` in
+[Your own agent loop](your-own-agent-loop.html). Keep `Bash` for the tests that check
 what those tools will run.
 
 ## The finished program
@@ -366,4 +366,4 @@ Each test starts from a new `Bash` and needs no temporary folder, no mount and
 no network. Name the file `test_*.py` and pytest collects the same three
 functions; run it as it is and the last line prints the result.
 
-The command set a snippet may use is in [The shell it runs](10-the-shell.md).
+The command set a snippet may use is in [The shell it runs](what-the-shell-can-do.html).

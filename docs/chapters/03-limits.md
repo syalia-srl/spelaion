@@ -84,7 +84,7 @@ print("after the restart:", sb.bash("cat keep.txt").stdout, end="")
 What the killed call loses is its shell state: variables and the working
 directory, which start fresh on every call anyway. Files survive because they
 live on the host mount, not in the child. [Giving the agent
-folders](02-mounts.md) covers which mounts keep writes and which refuse them.
+folders](giving-the-agent-folders.html) covers which mounts keep writes and which refuse them.
 
 ## A shorter deadline inside the shell
 
@@ -105,7 +105,7 @@ shell ends that command and goes on. A single long command that does not check
 the deadline, such as a big `grep`, is not interrupted this way and runs until
 the call's own bound. A duration longer than `timeout_s` never fires, because
 the sandbox ends the call first, and that result has `timed_out=True`. [The
-shell](10-the-shell.md) lists the commands spelaion implements and where they
+shell](what-the-shell-can-do.html) lists the commands spelaion implements and where they
 differ from bash.
 
 ## Cutting long output
@@ -217,15 +217,15 @@ sb.close()
 
 ## Where to go next
 
-- [Giving the agent folders](02-mounts.md): read-only mounts, which do not
+- [Giving the agent folders](giving-the-agent-folders.html): read-only mounts, which do not
   count against `max_disk`, and what lasts between calls.
-- [Host commands](05-host-commands.md): commands written in Python in your
+- [Host commands](giving-the-agent-powers-with-host-commands.html): commands written in Python in your
   process; `ctx.remaining_s` reports the time left, and a handler that overruns
   is not interrupted, but the call returns the timeout result and the child
   restarts.
-- [Python in the sandbox](04-python.md): the python guest's memory counts
+- [Python in the sandbox](running-python-in-the-sandbox.html): the python guest's memory counts
   against `memory_mb` as well.
-- [Your own agent loop](07-own-loop.md): what to tell the model when
+- [Your own agent loop](your-own-agent-loop.html): what to tell the model when
   `timed_out` is true.
-- [MCP](08-mcp.md): serve the same three tools; requests that arrive together
+- [MCP](serving-the-tools-over-mcp.html): serve the same three tools; requests that arrive together
   run one after another.

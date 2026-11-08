@@ -111,7 +111,7 @@ print(r.stdout, end="")
 
 The call's output cap applies to the guest's output as it does to any command's,
 and the deadline covers the whole pipeline. [Bounding every
-call](03-limits.md) gives the numbers.
+call](bounding-every-call.html) gives the numbers.
 
 ## The mounts are all it has
 
@@ -187,7 +187,7 @@ print((output / "report.json").read_text())
 A script is the better shape once the job has more than a couple of imports:
 quoting a program inside `-c` through the shell gets unreadable, and a file in
 a writable mount is easy for the next call to fix with `edit`. [Giving the agent
-folders](02-mounts.md) covers what a writable mount exposes on the host.
+folders](giving-the-agent-folders.html) covers what a writable mount exposes on the host.
 
 ## What is not there
 
@@ -219,7 +219,7 @@ There is no `pip` either: `python3 -m pip` fails with `No module named pip`, and
 the site folder is built from the PyYAML copy spelaion vendors, so nothing
 installs into it from inside the sandbox. When the job needs the network or a
 host program, the product gives the agent a command for that job, not a wider
-guest; [Host commands](05-host-commands.md) shows how.
+guest; [Host commands](giving-the-agent-powers-with-host-commands.html) shows how.
 
 ## Each call a new interpreter
 
@@ -297,10 +297,10 @@ sb.close()
 
 ## Where to go next
 
-- [Giving the agent folders](02-mounts.md): read-only and writable mounts, and
+- [Giving the agent folders](giving-the-agent-folders.html): read-only and writable mounts, and
   what lasts between calls.
-- [Bounding every call](03-limits.md): the deadline, memory, output and disk
+- [Bounding every call](bounding-every-call.html): the deadline, memory, output and disk
   caps that a python call shares with the shell.
-- [Host commands](05-host-commands.md): when the job needs the network or the
+- [Host commands](giving-the-agent-powers-with-host-commands.html): when the job needs the network or the
   host, a command the product writes with its own power.
-- [Your own agent loop](07-own-loop.md): handing these three tools to a model.
+- [Your own agent loop](your-own-agent-loop.html): handing these three tools to a model.

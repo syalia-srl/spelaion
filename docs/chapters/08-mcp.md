@@ -240,9 +240,9 @@ Ctrl-C.
 
 ## Where to go next
 
-- [Host commands](05-host-commands.md): what a served sandbox exposes through
+- [Host commands](giving-the-agent-powers-with-host-commands.html): what a served sandbox exposes through
   `bash`, and how a handler gets its arguments and result.
-- [Harnesses](09-harnesses.md): pointing Claude Code or OpenCode at this URL
+- [Harnesses](running-claude-code-or-opencode.html): pointing Claude Code or OpenCode at this URL
   with these three tools and no others.
-- [Bounding every call](03-limits.md): the timeout, output and disk limits that
+- [Bounding every call](bounding-every-call.html): the timeout, output and disk limits that
   apply to calls arriving over MCP, because they go through the same sandbox.

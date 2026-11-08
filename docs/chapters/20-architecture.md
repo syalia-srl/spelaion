@@ -146,7 +146,7 @@ print(warnings[0].message)
 `(( x = 1 ))` is dropped: the call returns 0 and prints nothing, while
 `ShellEngine.parse` would show the warning. Keep that in mind when a new
 construct seems to work but has no effect; the shell's own gaps are in
-[The shell](10-the-shell.md).
+[The shell](what-the-shell-can-do.html).
 
 ## Three tiers, then the evaluator
 
@@ -293,7 +293,7 @@ which is useful for tests of the shell itself; a `Sandbox` builds a fresh
 `ShellState` for every call and keeps only the files, since those are real. The
 protocol is the seam: every command receives `(args, ShellState, Filesystem,
 IOContext)` and works through those methods, so the same `grep` runs on either
-filesystem. [The in-memory Bash](11-testing-with-bash.md) has the rest.
+filesystem. [The in-memory Bash](testing-shell-scripts-with-bash.html) has the rest.
 
 ## The product's process and its child
 
@@ -443,7 +443,7 @@ the parent builds the folder (`ensure_python`, called from the `Sandbox`
 constructor when `python=True`); a child that finds it missing prints a message
 and exits 127. A writable mount may not hold the cache or lie inside it,
 because the cache holds native code the next process loads.
-[python](04-python.md) covers the guest from the user's side.
+[python](running-python-in-the-sandbox.html) covers the guest from the user's side.
 
 ## Where a change goes
 
@@ -465,12 +465,12 @@ because the cache holds native code the next process loads.
   `exec/cmd_eval.py` or one of the evaluators. Until all three exist the syntax
   is a warning and a dropped node.
 - A host command needs no change here; `@sb.command` registers a Python function
-  in the product's process ([host commands](05-host-commands.md)).
+  in the product's process ([host commands](giving-the-agent-powers-with-host-commands.html)).
 - A path rule belongs in `MountFs.host_path` or `_entry` and nowhere else. Read
-  [the security model](21-security.md) before you loosen one.
+  [the security model](the-security-model.html) before you loosen one.
 - A limit starts in `Limits` in `_types.py` and then reaches `_child` for the
   rlimits and the timer, `_shell` for truncation, `MountFs` for the disk cap and
-  `python/runner.py` for the guest ([Bounding every call](03-limits.md)).
+  `python/runner.py` for the guest ([Bounding every call](bounding-every-call.html)).
 
 The gates are five: `ruff check`, `ruff format --check`, `pyright`,
 `tach check` and `pytest -q`, and CI runs all of them. The book adds its own:

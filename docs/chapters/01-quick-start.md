@@ -77,6 +77,6 @@ manager, which closes it on the way out.
 
 ## Where to go next
 
-- [Giving the agent folders](02-mounts.md): read-only and writable mounts,
+- [Giving the agent folders](giving-the-agent-folders.html): read-only and writable mounts,
   and what lasts between calls.
-- [Your own agent loop](07-own-loop.md): hand these three calls to a model.
+- [Your own agent loop](your-own-agent-loop.html): hand these three calls to a model.
