@@ -34,6 +34,9 @@ _GREP_BOOL_FLAGS: dict[str, str] = {
     "w": "word_match",
     "q": "quiet",
     "o": "only_match",
+    "s": "no_messages",
+    "h": "no_filename",
+    "H": "with_filename",
 }
 
 
@@ -46,6 +49,8 @@ def cmd_grep(  # noqa: C901
     opts: dict[str, bool] = {v: False for v in _GREP_BOOL_FLAGS.values()}
     after_ctx = 0
     before_ctx = 0
+    # --include, --exclude and --exclude-dir globs, matched on base names.
+    globs: dict[str, list[str]] = {"include": [], "exclude": [], "exclude-dir": []}
 
     def _set_flag(ch: str) -> bool:
         attr = _GREP_BOOL_FLAGS.get(ch)
@@ -74,6 +79,12 @@ def cmd_grep(  # noqa: C901
         elif a == "--":
             files.extend(args[i + 1 :])
             break
+        elif a.startswith("--") and a[2:].split("=", 1)[0] in globs:
+            name, eq, value = a[2:].partition("=")
+            if not eq and i + 1 < len(args):
+                i += 1
+                value = args[i]
+            globs[name].append(value)
         elif (
             a.startswith("-")
             and len(a) > 2
@@ -112,10 +123,20 @@ def cmd_grep(  # noqa: C901
         io.stderr.write(f"grep: invalid regex: {e}\n")
         return CommandResult(exit_code=2)
 
-    # Collect files to search
-    if not files:
-        files = ["-"]
+    def wanted(name: str) -> bool:
+        base = posixpath.basename(name)
+        if globs["include"] and not any(
+            _fnmatch.fnmatchcase(base, g) for g in globs["include"]
+        ):
+            return False
+        return not any(_fnmatch.fnmatchcase(base, g) for g in globs["exclude"])
 
+    # Collect files to search; with -r and none given, the working folder.
+    defaulted = not files and opts["recursive"]
+    if not files:
+        files = ["."] if defaulted else ["-"]
+
+    multi_file = len(files) > 1
     if opts["recursive"]:
         expanded_files: list[str] = []
         for f in files:
@@ -123,16 +144,40 @@ def cmd_grep(  # noqa: C901
                 expanded_files.append("-")
                 continue
             abs_path = vfs.resolve(f, state.cwd)
-            if vfs.is_dir(abs_path):
-                for dirpath, _dirs, fnames in vfs.walk(abs_path):
-                    for fn in fnames:
-                        expanded_files.append(dirpath.rstrip("/") + "/" + fn)
-            else:
-                expanded_files.append(abs_path)
+            if not vfs.is_dir(abs_path):
+                if wanted(f):
+                    expanded_files.append(f)
+                continue
+            multi_file = True
+            # Name each file as the argument spelt it, as grep does.
+            shown = "" if defaulted else f.rstrip("/") or "/"
+            for dirpath, _dirs, fnames in vfs.walk(abs_path):
+                rel = dirpath[len(abs_path) :].strip("/")
+                parts = [p for p in rel.split("/") if p]
+                if any(
+                    _fnmatch.fnmatchcase(p, g)
+                    for p in parts
+                    for g in globs["exclude-dir"]
+                ):
+                    continue
+                for fn in sorted(fnames):
+                    # A link out of the mount is no file: grep -r skips
+                    # symlinks it meets, so say nothing about it.
+                    if wanted(fn) and vfs.is_file(dirpath.rstrip("/") + "/" + fn):
+                        name = (
+                            posixpath.join(shown, rel, fn)
+                            if rel
+                            else posixpath.join(shown, fn)
+                        )
+                        expanded_files.append(name)
         files = expanded_files
 
-    multi_file = len(files) > 1
+    if opts["no_filename"]:
+        multi_file = False
+    elif opts["with_filename"]:
+        multi_file = True
     matched_any = False
+    failed = False
 
     for f in files:
         if f == "-":
@@ -142,8 +187,11 @@ def cmd_grep(  # noqa: C901
             abs_path = vfs.resolve(f, state.cwd)
             try:
                 content = vfs.read(abs_path).decode("utf-8", errors="replace")
-            except (FileNotFoundError, IsADirectoryError):
-                io.stderr.write(f"grep: {f}: No such file or directory\n")
+            except OSError as e:
+                # Report it and go on; the exit code says an error happened.
+                if not opts["no_messages"]:
+                    io.stderr.write(f"grep: {f}: {e.strerror or e}\n")
+                failed = True
                 continue
             fname = f
 
@@ -208,6 +256,8 @@ def cmd_grep(  # noqa: C901
                     io,
                 )
 
+    if failed and not (opts["quiet"] and matched_any):
+        return CommandResult(exit_code=2)
     return CommandResult(exit_code=0 if matched_any else 1)
 
 
