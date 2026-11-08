@@ -80,7 +80,7 @@ def make_tools(
 
 
 def describe_bash(
-    mounts: list[Mount], cwd: str, python: bool, commands: list[str]
+    mounts: list[Mount], cwd: str, python: bool, commands: list[str], timeout_s: float
 ) -> str:
     """What the model reads about ``bash``; it names no host path."""
     folders = ", ".join(
@@ -96,13 +96,18 @@ def describe_bash(
         "Each call starts a fresh shell: variables, functions and cd do not "
         "persist; files do. "
         f"There is no network, no pip, no background processes; {python_text}. "
+        f"A call times out after {timeout_s:g} seconds; long output is cut with "
+        "a notice. "
         f"Extra commands: {', '.join(commands)}. "
         "show FILE... shows you PNG, JPEG or WebP images."
     )
 
 
 def output(result: Result) -> ToolOutput:
-    """stdout, then ``[stderr]`` and its text, then ``[exit code N]`` if not 0."""
+    """stdout, then ``[stderr]`` and its text, then ``[exit code N]`` if not 0.
+
+    A call that succeeds, prints nothing and shows no image reads ``(no output)``.
+    """
     text = result.stdout
     blocks: list[str] = []
     if result.stderr:
@@ -113,6 +118,8 @@ def output(result: Result) -> ToolOutput:
         if text and not text.endswith("\n"):
             text += "\n"
         text += block
+    if not text and not result.attachments:
+        text = "(no output)"
     return ToolOutput(text, list(result.attachments))
 
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from spelaion import HostContext, Mount, Result, Sandbox, Tool, ToolOutput
+from spelaion import HostContext, Limits, Mount, Result, Sandbox, Tool, ToolOutput
 
 PNG_FIXTURE = Path(__file__).parent / "sandbox" / "data" / "pixel.png"
 
@@ -89,6 +89,7 @@ def test_description_text(sb: Sandbox) -> None:
         "Each call starts a fresh shell: variables, functions and cd do not "
         "persist; files do. "
         "There is no network, no pip, no background processes; there is no python. "
+        "A call times out after 30 seconds; long output is cut with a notice. "
         "Extra commands: show. "
         "show FILE... shows you PNG, JPEG or WebP images."
     )
@@ -130,7 +131,7 @@ def test_edit_and_write_descriptions(sb: Sandbox) -> None:
 
 def test_write_then_edit(sb: Sandbox, rw: Path) -> None:
     tools = by_name(sb)
-    assert tools["write"].fn(path="a.txt", content="one two\n").text == ""
+    assert tools["write"].fn(path="a.txt", content="one two\n").text == "(no output)"
     assert (rw / "a.txt").read_text() == "one two\n"
     tools["edit"].fn(path="/scratch/a.txt", old="two", new="three")
     assert (rw / "a.txt").read_text() == "one three\n"
@@ -174,5 +175,17 @@ def test_images_come_through(sb: Sandbox, rw: Path) -> None:
 
 
 def test_write_creates_parent_folders(sb: Sandbox, rw: Path) -> None:
-    assert by_name(sb)["write"].fn(path="a/b/c.txt", content="x").text == ""
+    out = by_name(sb)["write"].fn(path="a/b/c.txt", content="x")
+    assert out.text == "(no output)"
     assert (rw / "a" / "b" / "c.txt").read_text() == "x"
+
+
+def test_description_names_the_sandbox_timeout(rw: Path) -> None:
+    with Sandbox([Mount("/scratch", rw)], limits=Limits(timeout_s=2.5)) as s:
+        description = by_name(s)["bash"].description
+    assert "A call times out after 2.5 seconds;" in description
+
+
+def test_empty_success_reads_no_output(sb: Sandbox) -> None:
+    assert by_name(sb)["bash"].fn(command="true").text == "(no output)"
+    assert by_name(sb)["bash"].fn(command="false").text == "[exit code 1]"
