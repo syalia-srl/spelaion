@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import posixpath
 from typing import TYPE_CHECKING
 
-from spelaion.commands._io import read_text
+from spelaion.commands._io import read_text, split_flags
 from spelaion.commands._registry import command
 from spelaion.runtime.result import CommandResult
 
@@ -76,11 +77,14 @@ def cmd_head(
         files = ["-"]
 
     exit_code = 0
+    first = True
     for f in files:
         content = read_text(f, state, vfs, io, "head")
         if content is None:
             exit_code = 1
             continue
+        if len(files) > 1:
+            first = _header(f, first, io)
         lines = content.splitlines(keepends=True)
         io.stdout.write("".join(lines[:n]))
 
@@ -115,19 +119,29 @@ def cmd_tail(
         files = ["-"]
 
     exit_code = 0
+    first = True
     for f in files:
         content = read_text(f, state, vfs, io, "tail")
         if content is None:
             exit_code = 1
             continue
+        if len(files) > 1:
+            first = _header(f, first, io)
         lines = content.splitlines(keepends=True)
         if from_start:
             # +N means starting from line N (1-indexed)
-            io.stdout.write("".join(lines[n - 1 :]))
-        else:
-            io.stdout.write("".join(lines[-n:]) if lines else "")
+            io.stdout.write("".join(lines[max(n - 1, 0) :]))
+        elif n > 0:
+            io.stdout.write("".join(lines[-n:]))
 
     return CommandResult(exit_code=exit_code)
+
+
+def _header(name: str, first: bool, io: IOContext) -> bool:
+    """GNU's ``==> name <==`` line before each of several files."""
+    shown = "standard input" if name == "-" else name
+    io.stdout.write(("" if first else "\n") + f"==> {shown} <==\n")
+    return False
 
 
 @command("tee")
@@ -200,9 +214,11 @@ def cmd_cp(
 ) -> CommandResult:
     recursive = False
     paths: list[str] = []
-    for a in args:
-        if a in ("-r", "-R", "--recursive"):
+    for a in split_flags(args, "rRafpv"):
+        if a in ("-r", "-R", "-a", "--recursive", "--archive"):
             recursive = True
+        elif a in ("-f", "-p", "-v", "--force"):
+            pass
         else:
             paths.append(a)
 
@@ -212,26 +228,74 @@ def cmd_cp(
 
     dst = vfs.resolve(paths[-1], state.cwd)
     sources = paths[:-1]
+    into = vfs.is_dir(dst)
+    if len(sources) > 1 and not into:
+        io.stderr.write(f"cp: target '{paths[-1]}' is not a directory\n")
+        return CommandResult(exit_code=1)
 
     exit_code = 0
     for src_arg in sources:
         src = vfs.resolve(src_arg, state.cwd)
-        try:
-            if vfs.is_dir(src):
-                if not recursive:
-                    io.stderr.write(
-                        f"cp: -r not specified; omitting directory '{src_arg}'\n"
-                    )
-                    exit_code = 1
-                    continue
-                vfs.copy_tree(src, dst)
-            else:
-                vfs.copy_file(src, dst)
-        except FileNotFoundError:
+        target = dst.rstrip("/") + "/" + posixpath.basename(src) if into else dst
+        named = (
+            paths[-1].rstrip("/") + "/" + posixpath.basename(src) if into else paths[-1]
+        )
+        if not vfs.exists(src):
             io.stderr.write(f"cp: cannot stat '{src_arg}': No such file or directory\n")
             exit_code = 1
+        elif not vfs.is_dir(src):
+            exit_code |= _cp_file(src_arg, src, target, vfs, io)
+        elif not recursive:
+            io.stderr.write(f"cp: -r not specified; omitting directory '{src_arg}'\n")
+            exit_code = 1
+        else:
+            exit_code |= _cp_tree(src_arg, src, target, named, vfs, io)
 
     return CommandResult(exit_code=exit_code)
+
+
+def _cp_file(shown: str, src: str, dst: str, vfs: Filesystem, io: IOContext) -> int:
+    try:
+        vfs.write(dst, vfs.read(src))
+    except OSError as e:
+        io.stderr.write(f"cp: cannot copy '{shown}': {e.strerror or e}\n")
+        return 1
+    return 0
+
+
+def _cp_tree(
+    shown: str, src: str, dst: str, dst_arg: str, vfs: Filesystem, io: IOContext
+) -> int:
+    """Copy folder *src* to *dst*, file by file, going on past a failed one.
+
+    The tree is listed before anything is written, so a destination inside
+    the source gets the source as it was and is not copied into itself.
+    """
+    inside = dst == src or dst.startswith(src.rstrip("/") + "/")
+    folders: list[str] = []
+    files: list[str] = []
+    for dirpath, _dirnames, filenames in vfs.walk(src):
+        rel = dirpath[len(src) :]
+        if inside and (src.rstrip("/") + rel + "/").startswith(dst.rstrip("/") + "/"):
+            continue
+        folders.append(rel)
+        files.extend(rel + "/" + f for f in filenames)
+    rc = 0
+    try:
+        for rel in folders:
+            if not vfs.is_dir(dst + rel):
+                vfs.mkdir(dst + rel, parents=True)
+    except OSError as e:
+        io.stderr.write(f"cp: cannot create directory '{dst_arg}': {e.strerror or e}\n")
+        return 1
+    for rel in files:
+        rc |= _cp_file(shown.rstrip("/") + rel, src + rel, dst + rel, vfs, io)
+    if inside:
+        io.stderr.write(
+            f"cp: cannot copy a directory, '{shown}', into itself, '{dst_arg}'\n"
+        )
+        rc = 1
+    return rc
 
 
 @command("mv")
