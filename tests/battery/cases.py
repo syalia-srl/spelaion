@@ -120,6 +120,11 @@ CASES: list[Case] = [
         "mkdir -p d && cp -r d d/e; echo rc=$?; ls d",
         gap="cp -r recurses into its own output",
     ),
+    Case("&& then >", "echo a && echo b > f; echo --; cat f"),
+    Case("| then >", "echo a | tr a b > f && cat f"),
+    Case("2>/dev/null", "cat /nope 2>/dev/null; echo rc=$?"),
+    Case(">/dev/null 2>&1", "ls /project >/dev/null 2>&1 && echo quiet"),
+    Case("< /dev/null", "wc -l < /dev/null"),
     Case(
         "append >>",
         "echo one > log && echo two >> log && cat log",
@@ -135,12 +140,13 @@ CASES: list[Case] = [
     Case("while read", "printf 'a b\\nc d\\n' | while read x y; do echo $y$x; done"),
     Case("$? after fail", "grep -q zzz /project/plan.yaml; echo $?"),
     Case("set -e", "set -e; false; echo unreachable"),
-    Case("null builtin", ": ; echo $?", gap=": is command not found"),
+    Case("null builtin", ": ; echo $?"),
     Case(
         "true in while",
         "i=0; while :; do i=$((i+1)); [ $i -ge 3 ] && break; done; echo $i",
-        gap=": is command not found",
     ),
+    Case("command -v", "command -v jq >/dev/null && echo has jq || echo no jq"),
+    Case("command -v missing", "command -v nosuchtool || echo missing"),
     Case("case", "x=b.py; case $x in *.py) echo py;; *) echo other;; esac"),
     Case(
         "multi-file error",
