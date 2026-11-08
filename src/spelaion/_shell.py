@@ -96,7 +96,15 @@ class Shell:
             )
             exit_code = executor.execute_node(program, io).exit_code
         except SystemExit as e:
-            exit_code = e.code if isinstance(e.code, int) else 0
+            # As Python maps it: None is 0, an int its low byte, anything
+            # else 1 with the value on stderr.
+            if e.code is None:
+                exit_code = 0
+            elif isinstance(e.code, int):
+                exit_code = e.code & 255
+            else:
+                io.stderr.write(f"{e.code}\n")
+                exit_code = 1
         except LoopLimit:
             # Its message is on stderr already.
             exit_code = 1
