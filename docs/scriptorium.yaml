@@ -23,6 +23,7 @@ files:
   - chapters/11-testing-with-bash.md
   - chapters/20-architecture.md
   - chapters/21-security.md
+  - chapters/22-adding-a-command.md
 
 outputs:
   site:
