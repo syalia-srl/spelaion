@@ -83,6 +83,10 @@ try:
     )
 except ValueError as e:
     print(str(e).replace(str(root), "<root>"))
+try:
+    Sandbox([Mount("/project", host=project), Mount("/project/", host=drafts)])
+except ValueError as e:
+    print(e)
 sb.close()
 try:
     sb.bash("ls /")
