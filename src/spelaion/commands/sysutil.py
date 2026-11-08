@@ -109,16 +109,16 @@ def cmd_env(
 def cmd_which(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
-    from spelaion.commands._registry import COMMANDS
-    from spelaion.exec.builtins import BUILTINS
+    from spelaion.exec.builtins import kind_of
 
     exit_code = 0
     for name in args:
-        if name in state.functions:
+        kind = kind_of(name, state, io)
+        if kind == "function":
             io.stdout.write(f"{name}: shell function\n")
-        elif name in BUILTINS:
+        elif kind == "builtin":
             io.stdout.write(f"{name}: shell builtin\n")
-        elif name in COMMANDS:
+        elif kind is not None:
             io.stdout.write(f"{name}: virtual command\n")
         else:
             io.stderr.write(f"which: no {name} in virtual shell\n")

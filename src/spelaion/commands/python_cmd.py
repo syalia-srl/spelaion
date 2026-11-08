@@ -21,6 +21,11 @@ def install(runner: CommandFn) -> None:
     _runner[:] = [runner]
 
 
+def available() -> bool:
+    """Whether this process runs python; without it ``which python`` fails."""
+    return bool(_runner)
+
+
 def _register(name: str) -> None:
     def run(
         args: list[str], state: ShellState, vfs: Filesystem, io: IOContext

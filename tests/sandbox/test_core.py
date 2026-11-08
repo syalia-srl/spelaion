@@ -460,3 +460,19 @@ def test_four_byte_output_past_the_old_bound(rw: Path) -> None:
         )
     assert r.exit_code == 0, r.stderr[-200:]
     assert r.stdout == "😀" * 290_000 and r.stderr == "😀" * 290_000
+
+
+def test_no_python_is_not_found(sb: Sandbox) -> None:
+    r = sb.bash("command -v python; which python3; type python; echo $?")
+    assert r.stdout == "1\n"
+    r = sb.bash("command -v python || echo absent")
+    assert r.stdout == "absent\n"
+
+
+def test_command_finds_host_commands(sb: Sandbox) -> None:
+    @sb.command("hello")
+    def hello(ctx: object, args: list[str]) -> Result:
+        return Result(stdout="hi\n")
+
+    r = sb.bash("command -v ls hello cd; command -v nope; echo $?")
+    assert r.stdout == "ls\nhello\ncd\n1\n"

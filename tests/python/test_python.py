@@ -67,6 +67,11 @@ def test_print(sb: Sandbox) -> None:
     assert sb.bash("python -c 'print(1)'").stdout == "1\n"
 
 
+def test_python_is_found(sb: Sandbox) -> None:
+    r = sb.bash("command -v python3 && which python >/dev/null && echo yes")
+    assert r.stdout == "python3\nyes\n"
+
+
 def test_yaml(sb: Sandbox) -> None:
     r = sb.bash("python3 -c 'import yaml; print(yaml.safe_dump({\"a\": 1}).strip())'")
     assert r.stdout == "a: 1\n"
