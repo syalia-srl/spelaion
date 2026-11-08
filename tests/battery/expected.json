@@ -131,6 +131,14 @@
     "stdout": "12\n",
     "exit_code": 0
   },
+  "awk average": {
+    "stdout": "3 4\n",
+    "exit_code": 0
+  },
+  "awk length()": {
+    "stdout": "27\n",
+    "exit_code": 0
+  },
   "awk -F": {
     "stdout": "end\n",
     "exit_code": 0

@@ -91,7 +91,14 @@ CASES: list[Case] = [
     Case(
         "awk sum",
         "printf '3\\n4\\n5\\n' | awk '{s+=$1} END {print s}'",
-        gap="awk reads s+=$1 as a string",
+    ),
+    Case(
+        "awk average", "printf '2\\n3\\n7\\n' | awk '{n++; t+=$1} END {print n, t/n}'"
+    ),
+    Case(
+        "awk length()",
+        "awk '{t+=length($0)} END {print t}' /project/words.txt",
+        gap="awk has no built-in functions (length, substr, split, ...)",
     ),
     Case("awk -F", "awk -F': ' '/version/ {print NR}' /project/plan.yaml; echo end"),
     Case("cat spaces", "cat '/project/notes with spaces.txt' | wc -l"),

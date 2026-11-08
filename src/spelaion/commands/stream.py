@@ -400,6 +400,32 @@ def _awk_compare(lval: str, rval: str, op: str) -> bool:
         return fn(lval, rval)  # type: ignore[arg-type]
 
 
+_AWK_NAME = re.compile(r"^[A-Za-z_]\w*$")
+_AWK_NUMBER = re.compile(r"^\s*[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?")
+
+
+def _awk_num(text: str) -> float:
+    """A string's numeric value in awk: its leading number, else 0."""
+    m = _AWK_NUMBER.match(text)
+    return float(m.group(0)) if m else 0.0
+
+
+def _awk_arith(lv: float, rv: float, op: str) -> str:
+    if op == "+":
+        val = lv + rv
+    elif op == "-":
+        val = lv - rv
+    elif op == "*":
+        val = lv * rv
+    elif op == "/":
+        val = lv / rv if rv != 0 else 0.0
+    else:
+        val = lv % rv if rv != 0 else 0.0
+    if val.is_integer():
+        return str(int(val))
+    return f"{val:.6g}"
+
+
 class _AwkInterpreter:
     """Mini awk interpreter supporting common patterns."""
 
@@ -505,7 +531,7 @@ class _AwkInterpreter:
                 return fields[idx - 1] if 0 < idx <= len(fields) else ""
             except (ValueError, IndexError):
                 return ""
-        return self.vars.get(ref, ref)
+        return self._var(ref)
 
     def _eval_expr(self, expr: str, fields: list[str], line: str) -> str:
         expr = expr.strip()
@@ -516,9 +542,13 @@ class _AwkInterpreter:
             return expr[1:-1]
         if expr.startswith("$"):
             return self._get_field(expr, fields, line)
-        if expr in self.vars:
-            return self.vars[expr]
-        return expr
+        return self._var(expr)
+
+    def _var(self, name: str) -> str:
+        """A variable's value; an unset one is empty, as in awk."""
+        if name in self.vars:
+            return self.vars[name]
+        return "" if _AWK_NAME.match(name) else name
 
     def _exec_action(self, action: str, fields: list[str], line: str) -> None:
         """Execute an awk action block."""
@@ -531,6 +561,15 @@ class _AwkInterpreter:
 
     def _exec_statement(self, stmt: str, fields: list[str], line: str) -> None:
         stmt = stmt.strip()
+
+        # Compound assignment: var += expr, and -=, *=, /=, %=
+        m = re.match(r"^(\$?[a-zA-Z_0-9]\w*)\s*([-+*/%])=\s*(.+)$", stmt)
+        if m:
+            name, op = m.group(1), m.group(2)
+            current = self._eval_awk_expr(name, fields, line)
+            rhs = self._eval_awk_expr(m.group(3), fields, line)
+            self.vars[name] = _awk_arith(_awk_num(current), _awk_num(rhs), op)
+            return
 
         # Variable assignment: var = expr
         m = re.match(r"^([a-zA-Z_]\w*)\s*=\s*(.+)$", stmt)
@@ -619,32 +658,13 @@ class _AwkInterpreter:
                 if 0 < idx < len(expr) - 1:
                     left = expr[:idx].strip()
                     right = expr[idx + 1 :].strip()
-                    try:
-                        lv = float(self._eval_awk_expr(left, fields, line))
-                        rv = float(self._eval_awk_expr(right, fields, line))
-                    except (ValueError, ZeroDivisionError):
-                        continue
-                    if op == "+":
-                        val = lv + rv
-                    elif op == "-":
-                        val = lv - rv
-                    elif op == "*":
-                        val = lv * rv
-                    elif op == "/":
-                        val = lv / rv if rv != 0 else 0.0
-                    else:
-                        val = lv % rv if rv != 0 else 0.0
-                    if isinstance(val, float) and val.is_integer():
-                        return str(int(val))
-                    return str(val)
+                    lv = _awk_num(self._eval_awk_expr(left, fields, line))
+                    rv = _awk_num(self._eval_awk_expr(right, fields, line))
+                    return _awk_arith(lv, rv, op)
             # Only try higher-precedence ops if no lower ones found
             # (but we need to check all ops at each level)
 
-        # Variable lookup
-        if expr in self.vars:
-            return self.vars[expr]
-
-        return expr
+        return self._var(expr)
 
     def _eval_concat(self, expr: str, fields: list[str], line: str) -> str:
         """Evaluate string concatenation."""
