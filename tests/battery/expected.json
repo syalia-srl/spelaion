@@ -203,6 +203,38 @@
     "stdout": "hello w\nsub\n",
     "exit_code": 0
   },
+  "heredoc > f": {
+    "stdout": "hola $X\n",
+    "exit_code": 0
+  },
+  "heredoc | wc": {
+    "stdout": "2\n",
+    "exit_code": 0
+  },
+  "heredoc &&": {
+    "stdout": "x\nafter\n",
+    "exit_code": 0
+  },
+  "heredoc >> f": {
+    "stdout": "one\ntwo\n",
+    "exit_code": 0
+  },
+  "heredoc | | && ||": {
+    "stdout": "2\nok\n",
+    "exit_code": 0
+  },
+  "&& heredoc |": {
+    "stdout": "rc=1\n",
+    "exit_code": 0
+  },
+  "heredoc > f &&": {
+    "stdout": "Y=2\n",
+    "exit_code": 0
+  },
+  "heredoc $VAR > f": {
+    "stdout": "n=7\nn=$N\n",
+    "exit_code": 0
+  },
   "sed -i multiple": {
     "stdout": "def salute(name: str) -> str:\n    return f\"hello, {name}\"\n\n\ndef shout(name: str) -> str:\n    return salute(name).upper()\n",
     "exit_code": 0
@@ -341,6 +373,10 @@
   },
   "python heredoc": {
     "stdout": "1.2.0\n",
+    "exit_code": 0
+  },
+  "python heredoc > f": {
+    "stdout": "1024\n",
     "exit_code": 0
   },
   "python | grep": {

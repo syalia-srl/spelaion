@@ -176,3 +176,33 @@ class TestNormalizeNonAscii:
         result = Bash().run("echo ñ; echo 'x y' \"é $((1+1))\"")
         assert result.exit_code == 0
         assert result.stdout == "ñ\nx y é 2\n"
+
+
+class TestHeredocTail:
+    """tree-sitter-bash nests what follows ``<<EOF`` on its line in the here-doc."""
+
+    def test_redirect_after_heredoc_goes_to_the_command(self) -> None:
+        cmd = _parse_and_normalize("cat <<'EOF' > f\nx\nEOF\n").body[0]
+        assert isinstance(cmd, SimpleCommand)
+        assert [r.op for r in cmd.redirections] == ["<<", ">"]
+
+    def test_pipe_after_heredoc_continues_the_pipeline(self) -> None:
+        node = _parse_and_normalize("cat <<EOF | grep b | wc -l\nx\nEOF\n").body[0]
+        assert isinstance(node, Pipeline)
+        assert len(node.commands) == 3
+
+    def test_and_or_after_heredoc_pipeline(self) -> None:
+        script = "cat <<EOF | wc -l && echo ok || echo no\nx\nEOF\n"
+        node = _parse_and_normalize(script).body[0]
+        # ((cat | wc) && echo ok) || echo no
+        assert isinstance(node, AndOrList)
+        assert node.operators == ("||",)
+        inner = node.commands[0]
+        assert isinstance(inner, AndOrList)
+        assert inner.operators == ("&&",)
+        assert isinstance(inner.commands[0], Pipeline)
+
+    def test_pipe_binds_to_the_heredoc_command_in_a_list(self) -> None:
+        node = _parse_and_normalize("a && cat <<EOF | wc -l\nx\nEOF\n").body[0]
+        assert isinstance(node, AndOrList)
+        assert isinstance(node.commands[1], Pipeline)
