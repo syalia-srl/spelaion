@@ -10,7 +10,7 @@ an MIT-licensed shell by Mayflower GmbH; their license is kept in `LICENSES/`.
 
 The shell is pure Python: a tree-sitter-bash parser, a project-owned AST, an
 evaluator with three-tier resolution (function, builtin, virtual command),
-128 commands and 39 builtins, over the mounted folders (`MountFs`); the
+128 commands and 42 builtins, over the mounted folders (`MountFs`); the
 in-memory filesystem remains for the `Bash` test class.
 
 ## Constraints

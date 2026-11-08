@@ -13,7 +13,7 @@ mounts.
 
 - **A `Sandbox`** with the three tools an agent needs, `bash`, `edit` and
   `write`, over host folders you mount read-only or writable.
-- **A shell in a child process**, pure Python, with 128 commands and 39
+- **A shell in a child process**, pure Python, with 128 commands and 42
   builtins, bounded per call by a deadline, a memory cap and caps on output
   and disk.
 - **python and python3**, CPython 3.14 compiled to WASI, with the standard
