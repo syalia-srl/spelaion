@@ -10,7 +10,9 @@ other MCP server, its own config folder and an empty working folder. It
 prints the tools Claude Code reports at start and the model's answer.
 
 The config folder is yours to choose and log into; this script never creates
-it and never copies a login into it.
+it and never copies a login into it. Claude Code gets this process's
+environment without ``CLAUDECODE`` and the ``CLAUDE_CODE_*`` variables, so a
+run from inside another Claude Code session behaves as one from a shell.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -74,21 +77,43 @@ def run(prompt: str, config_dir: Path, claude: str = "claude") -> Run:
                 str(config),
             ],
             cwd=work,
-            env={**os.environ, "CLAUDE_CONFIG_DIR": str(config_dir)},
+            env=_env(config_dir),
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=300,
             check=False,
         )
-    events = [json.loads(line) for line in out.stdout.splitlines() if line.strip()]
+    failed = RuntimeError(
+        f"claude exited {out.returncode}\n{out.stderr}\n{out.stdout[-2000:]}"
+    )
+    if out.returncode != 0:
+        raise failed
+    events = list(_events(out.stdout))
     init = _event(events, "system", "init")
     result = _event(events, "result")
-    if out.returncode != 0 or init is None or result is None:
-        raise RuntimeError(
-            f"claude exited {out.returncode}\n{out.stderr}\n{out.stdout[-2000:]}"
-        )
+    if init is None or result is None:
+        raise failed
     return Run(tools=list(init["tools"]), answer=str(result.get("result", "")))
+
+
+def _env(config_dir: Path) -> dict[str, str]:
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k != "CLAUDECODE" and not k.startswith("CLAUDE_CODE_")
+    }
+    return {**env, "CLAUDE_CONFIG_DIR": str(config_dir)}
+
+
+def _events(stdout: str) -> Iterator[dict[str, Any]]:
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict):
+            yield event
 
 
 def _event(
@@ -118,6 +143,8 @@ def main() -> None:
         result = run(args.prompt, Path(args.config_dir).expanduser())
     except (FileNotFoundError, RuntimeError) as e:
         sys.exit(str(e))
+    except subprocess.TimeoutExpired as e:
+        sys.exit(f"claude did not finish in {e.timeout:g} s")
     print("tools:", ", ".join(result.tools))
     print(result.answer)
 
