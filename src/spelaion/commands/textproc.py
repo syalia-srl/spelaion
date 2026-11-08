@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import contextlib
+import re
 from typing import TYPE_CHECKING
 
-from spelaion.commands._io import read_text, read_text_inputs
+from spelaion.commands._io import read_text, read_text_inputs, split_flags
 from spelaion.commands._registry import command
 from spelaion.runtime.result import CommandResult
 
@@ -26,6 +26,7 @@ def cmd_sort(
     separator: str | None = None
     files: list[str] = []
 
+    args = split_flags(args, "rnu", "kt")
     i = 0
     while i < len(args):
         a = args[i]
@@ -37,9 +38,13 @@ def cmd_sort(
             unique = True
         elif a == "-k" and i + 1 < len(args):
             i += 1
-            # Parse key spec — use first field number
-            with contextlib.suppress(ValueError):
-                key_field = int(args[i].split(",")[0].split(".")[0])
+            # Key spec: its first field number, and n/r modifiers (-k2,2nr).
+            m = re.match(r"(\d+)", args[i])
+            if m:
+                key_field = int(m.group(1))
+            mods = re.sub(r"[\d.,]", "", args[i])
+            numeric = numeric or "n" in mods
+            reverse = reverse or "r" in mods
         elif a == "-t" and i + 1 < len(args):
             i += 1
             separator = args[i]
@@ -81,7 +86,7 @@ def cmd_uniq(
     only_uniq = False
     files: list[str] = []
 
-    for a in args:
+    for a in split_flags(args, "cdu"):
         if a == "-c":
             count = True
         elif a == "-d":
@@ -124,7 +129,7 @@ def cmd_wc(
     show_bytes = False
     files: list[str] = []
 
-    for a in args:
+    for a in split_flags(args, "lwc"):
         if a == "-l":
             show_lines = True
         elif a == "-w":
@@ -148,29 +153,29 @@ def cmd_wc(
             out.append(len(text.encode("utf-8")))
         return out
 
-    if len(files) < 2:
-        text, exit_code = read_text_inputs(files, state, vfs, io, "wc")
-        io.stdout.write(" ".join(map(str, counts(text))) + "\n")
-        return CommandResult(exit_code=exit_code)
-
-    # Several files: one line each, then a total, padded to one width as GNU does.
     rows: list[tuple[list[int], str]] = []
     exit_code = 0
-    for f in files:
+    size = 0
+    piped = not files
+    for f in files or ["-"]:
         content = read_text(f, state, vfs, io, "wc")
         if content is None:
             exit_code = 1
-        else:
-            rows.append((counts(content), f))
-    total = (
-        [sum(col) for col in zip(*(r[0] for r in rows), strict=True)]
-        if rows
-        else counts("")
-    )
-    rows.append((total, "total"))
-    width = max(len(str(c)) for r in rows for c in r[0])
+            continue
+        piped = piped or f == "-"
+        size += len(content.encode("utf-8"))
+        rows.append((counts(content), "" if f == "-" and not files else f))
+    if len(files) > 1:
+        total = [sum(col) for col in zip(*(r[0] for r in rows), strict=True)]
+        rows.append((total or counts(""), "total"))
+    # GNU's width: digits of the inputs' total size, at least 7 when one is
+    # a pipe, and 1 for a single count of a single input.
+    width = 1
+    if rows and (len(rows[0][0]) > 1 or len(files) > 1):
+        width = max(len(str(size)), 7 if piped else 1)
     for nums, name in rows:
-        io.stdout.write(" ".join(str(c).rjust(width) for c in nums) + f" {name}\n")
+        line = " ".join(str(c).rjust(width) for c in nums)
+        io.stdout.write(f"{line} {name}\n" if name else line + "\n")
     return CommandResult(exit_code=exit_code)
 
 

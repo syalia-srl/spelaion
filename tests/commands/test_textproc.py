@@ -316,7 +316,7 @@ class TestWc:
         io = IOContext()
         result = cmd_wc(["-w", "/data.txt"], state, vfs, io)
         assert result.exit_code == 0
-        assert io.stdout.getvalue().strip() == "3"
+        assert io.stdout.getvalue() == "3 /data.txt\n"
 
     def test_multibyte_characters(
         self, state: ShellState, vfs: VirtualFilesystem
@@ -836,7 +836,7 @@ class TestStdinFromFile:
         io = IOContext()
         result = cmd_wc(["-l", "/input.txt"], state, vfs, io)
         assert result.exit_code == 0
-        assert io.stdout.getvalue().strip() == "2"
+        assert io.stdout.getvalue() == "2 /input.txt\n"
 
     def test_rev_reads_file(self, state: ShellState, vfs: VirtualFilesystem) -> None:
         vfs.write("/input.txt", b"abc\n")

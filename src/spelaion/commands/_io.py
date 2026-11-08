@@ -32,6 +32,41 @@ def read_text(
     except IsADirectoryError:
         io.stderr.write(f"{cmd}: {path}: Is a directory\n")
         return None
+    except OSError as e:
+        # One unreadable file (a symlink out of its mount) never ends the
+        # command: say so and go on with the rest, as GNU tools do.
+        io.stderr.write(f"{cmd}: {path}: {e.strerror or e}\n")
+        return None
+
+
+def split_flags(args: list[str], letters: str, valued: str = "") -> list[str]:
+    """Split ``-rn`` into ``-r -n`` and ``-k2`` into ``-k 2``.
+
+    Only arguments made wholly of *letters*, or of *letters* ending in one
+    of *valued* (which takes the rest as its value), are split; anything
+    else, and everything after ``--``, is left as it is.
+    """
+    out: list[str] = []
+    for i, a in enumerate(args):
+        if a == "--":
+            out.extend(args[i:])
+            break
+        if len(a) > 2 and a[0] == "-" and a[1] != "-":
+            body = a[1:]
+            split: list[str] = []
+            for j, ch in enumerate(body):
+                if ch in valued:
+                    split += [f"-{ch}", body[j + 1 :]] if body[j + 1 :] else [f"-{ch}"]
+                    break
+                if ch not in letters:
+                    split = []
+                    break
+                split.append(f"-{ch}")
+            if split:
+                out.extend(split)
+                continue
+        out.append(a)
+    return out
 
 
 def read_text_inputs(
