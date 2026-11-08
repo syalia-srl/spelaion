@@ -17,11 +17,13 @@ def execute_pipeline(
     input_text: str = "",
     pipefail: bool = False,
     stderr: StringIO | None = None,
+    statuses: list[int] | None = None,
 ) -> CommandResult:
     """Execute a pipeline of commands connected by in-memory buffers.
 
     Each command is a callable that takes an IOContext and returns CommandResult.
     Every stage writes its errors to *stderr*, as each would to the terminal.
+    Each stage's exit code is appended to *statuses*, for ``PIPESTATUS``.
     """
     if stderr is None:
         stderr = StringIO()
@@ -32,7 +34,8 @@ def execute_pipeline(
         io = IOContext(stdin=StringIO(input_text), stderr=stderr)
         return commands[0](io)
 
-    statuses: list[int] = []
+    if statuses is None:
+        statuses = []
     current_input = input_text
 
     for cmd_fn in commands:
