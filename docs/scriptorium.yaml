@@ -19,6 +19,7 @@ files:
   - chapters/07-own-loop.md
   - chapters/08-mcp.md
   - chapters/09-harnesses.md
+  - chapters/10-the-shell.md
   - chapters/11-testing-with-bash.md
 
 outputs:
