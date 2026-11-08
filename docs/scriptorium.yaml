@@ -1,0 +1,22 @@
+# spelaion, the book. Every Python block runs against the installed package when
+# the book renders (`make docs`); the chapters tangle their programs into examples/.
+theme: book
+base-url: https://syalia-srl.github.io/spelaion/
+execute: {timeout: 120, freeze: file}
+
+vars:
+  title: "spelaion"
+  subtitle: "A bash for agents, run from Python, with nothing real behind it"
+
+files:
+  - chapters/00-index.md
+  - chapters/01-quick-start.md
+
+outputs:
+  site:
+    format: docs
+    dir: site
+    repo-url: https://github.com/syalia-srl/spelaion
+    version: auto
+  print:
+    format: pdf
