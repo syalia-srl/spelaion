@@ -1,7 +1,7 @@
 # spelaion
 
 [![CI](https://github.com/syalia-srl/spelaion/actions/workflows/ci.yml/badge.svg)](https://github.com/syalia-srl/spelaion/actions/workflows/ci.yml)
-[![Docs](https://github.com/syalia-srl/spelaion/actions/workflows/docs.yml/badge.svg)](https://syalia-srl.github.io/spelaion/)
+[![Docs](https://github.com/syalia-srl/spelaion/actions/workflows/docs.yml/badge.svg)](https://syalia.com/spelaion/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A bash for agents, run from Python, with nothing real behind it.
@@ -22,7 +22,7 @@ It needs Python 3.11 or later and is tested on Linux. `python` inside a sandbox 
 
 ## Documentation
 
-The book at <https://syalia-srl.github.io/spelaion/> ([PDF](https://syalia-srl.github.io/spelaion/spelaion.pdf)) starts with a [Quick Start](https://syalia-srl.github.io/spelaion/quick-start.html) and takes one job per chapter: mounting folders, bounding calls, python, host commands, images, your own agent loop, MCP, running Claude Code or OpenCode, what the shell can and cannot do, and testing scripts with `Bash`. Its Developer Guide covers the architecture, the [security model](https://syalia-srl.github.io/spelaion/the-security-model.html) and adding a command. Every code block in it runs when the book is built, and its sources are in [`docs/`](docs/).
+The book at <https://syalia.com/spelaion/> ([PDF](https://syalia.com/spelaion/spelaion.pdf)) starts with a [Quick Start](https://syalia.com/spelaion/quick-start.html) and takes one job per chapter: mounting folders, bounding calls, python, host commands, images, your own agent loop, MCP, running Claude Code or OpenCode, what the shell can and cannot do, and testing scripts with `Bash`. Its Developer Guide covers the architecture, the [security model](https://syalia.com/spelaion/the-security-model.html) and adding a command. Every code block in it runs when the book is built, and its sources are in [`docs/`](docs/).
 
 ## Development
 

@@ -1,7 +1,7 @@
 # spelaion, the book. Every Python block runs against the installed package when
 # the book renders (`make docs`); the chapters tangle their programs into examples/.
 theme: book
-base-url: https://syalia-srl.github.io/spelaion/
+base-url: https://syalia.com/spelaion/
 execute: {timeout: 120, freeze: file}
 
 vars:

@@ -10,7 +10,7 @@
 
 What a `Sandbox` lets an agent reach, what stops it, and what is out of
 scope is described, with a demonstration of each boundary, in the book's
-chapter [The security model](https://syalia-srl.github.io/spelaion/the-security-model.html).
+chapter [The security model](https://syalia.com/spelaion/the-security-model.html).
 
 ## Reporting a Vulnerability
 

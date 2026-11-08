@@ -22,7 +22,7 @@ around a sandbox.
 - A recipe for running Claude Code and OpenCode on spelaion, with a
   standalone Claude Code example and its test.
 - A battery of agent commands checked against real bash 5.
-- The book, at <https://syalia-srl.github.io/spelaion/> and as a PDF: a
+- The book, at <https://syalia.com/spelaion/> and as a PDF: a
   Quick Start, a User Guide with one job per chapter and a Developer Guide.
   Every block runs when it is built, and `make docs-check` gates it.
 
