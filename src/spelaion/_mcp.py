@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hmac
 import ipaddress
+import itertools
 import logging
 import socket
 import threading
@@ -44,6 +45,9 @@ class _QuietWhileStopping(logging.Filter):
 
 logging.getLogger("uvicorn.error").addFilter(_QuietWhileStopping())
 
+# Numbers server threads apart: a port is reused once a server stops.
+_serial = itertools.count(1)
+
 
 class McpServer:
     """An MCP server for one sandbox, on its own thread, until :meth:`stop`.
@@ -81,7 +85,10 @@ class McpServer:
             app = _BearerToken(app, token)
         config = uvicorn.Config(
             app,
-            log_level="warning",
+            # The product's own uvicorn loggers keep its handlers and levels;
+            # a line per request would flood them.
+            log_config=None,
+            access_log=False,
             timeout_graceful_shutdown=_GRACEFUL_S,
         )
         self._server = uvicorn.Server(config)
@@ -91,7 +98,7 @@ class McpServer:
         self._thread = threading.Thread(
             target=self._server.run,
             kwargs={"sockets": [sock]},
-            name=f"spelaion-mcp-{bound}",
+            name=f"spelaion-mcp-{bound}-{next(_serial)}",
             daemon=True,
         )
         self._thread.start()
