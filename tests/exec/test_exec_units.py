@@ -10,6 +10,7 @@ Covers:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from io import StringIO
 
 import pytest
@@ -263,6 +264,22 @@ class TestExecutePipelineEmptyOutput:
 
         result = execute_pipeline([silent, reader])
         assert result.stdout == "got:"
+
+
+class TestExecutePipelineStderr:
+    """Every stage's stderr reaches the pipeline's, in order."""
+
+    def test_each_stage_stderr_kept(self) -> None:
+        def noisy(name: str) -> Callable[[IOContext], CommandResult]:
+            def run(io: IOContext) -> CommandResult:
+                io.stderr.write(f"{name}\n")
+                return CommandResult(exit_code=0)
+
+            return run
+
+        err = StringIO()
+        execute_pipeline([noisy("a"), noisy("b")], stderr=err)
+        assert err.getvalue() == "a\nb\n"
 
 
 # ===========================================================================

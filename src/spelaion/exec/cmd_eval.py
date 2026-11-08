@@ -172,6 +172,7 @@ class CommandEvaluator:
                 stages,
                 input_text=stdin_text,
                 pipefail=self.state.options.pipefail,
+                stderr=io.stderr,
             )
             if result.stdout:
                 io.stdout.write(result.stdout)
