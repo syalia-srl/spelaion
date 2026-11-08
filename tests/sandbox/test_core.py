@@ -476,3 +476,26 @@ def test_command_finds_host_commands(sb: Sandbox) -> None:
 
     r = sb.bash("command -v ls hello cd; command -v nope; echo $?")
     assert r.stdout == "ls\nhello\ncd\n1\n"
+
+
+def test_one_bad_file_does_not_end_the_command(rw: Path, tmp_path: Path) -> None:
+    # A symlink out of the mount is unreadable; the files around it are not.
+    (tmp_path / "outside").write_text("secret\n")
+    t = rw / "t"
+    t.mkdir()
+    (t / "a").write_text("hit\n")
+    (t / "z").write_text("hit\n")
+    (t / "m").symlink_to(tmp_path / "outside")
+    with Sandbox([Mount("/s", rw)], cwd="/s") as sb:
+        r = sb.bash("grep hit t/a t/m t/z; echo rc=$?")
+        assert r.stdout == "t/a:hit\nt/z:hit\nrc=2\n"
+        assert r.stderr == "grep: t/m: Permission denied\n"
+        # grep -r skips the symlinks it meets.
+        assert sb.bash("grep -r hit t").stdout == "t/a:hit\nt/z:hit\n"
+        r = sb.bash("wc -l t/a t/m t/z; echo rc=$?")
+        assert r.stdout == "1 t/a\n1 t/z\n2 total\nrc=1\n"
+        r = sb.bash("cat t/a t/m t/z; echo rc=$?")
+        assert r.stdout == "hit\nhit\nrc=1\n"
+        r = sb.bash("cp -r t t2; echo rc=$?; ls t2")
+        assert r.stdout == "rc=1\na\nz\n"
+        assert "secret" not in sb.bash("cat t2/* 2>&1").stdout

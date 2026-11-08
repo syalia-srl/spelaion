@@ -41,7 +41,6 @@ CASES: list[Case] = [
     Case(
         "find | xargs wc",
         "find /project -name '*.yaml' | xargs wc -l | tail -1",
-        gap="wc pads its counts unlike GNU",
     ),
     Case("if [ -f ]", "if [ -f /project/plan.yaml ]; then echo yes; else echo no; fi"),
     Case("false ||", "false || echo recovered"),
@@ -58,21 +57,19 @@ CASES: list[Case] = [
     Case("sort | uniq -c", "sort /project/words.txt | uniq -c"),
     Case("cut | tr", "echo 'a:b:c' | cut -d: -f2 | tr a-z A-Z"),
     Case("head -n -1", "printf '1\\n2\\n3\\n' | head -n -1 | tail -1"),
-    Case("ls | grep", "ls /project | grep plan", gap="ls prints columns into a pipe"),
+    Case("ls | grep", "ls /project | grep plan"),
     # Obsolete short forms agents still write.
     Case("tail -1", "printf '1\\n2\\n' | tail -1"),
     Case("head -2", "printf '1\\n2\\n3\\n' | head -2"),
     Case(
         "wc several files",
         "cd /project && wc -l plan.yaml README.md words.txt",
-        gap="wc pads its counts unlike GNU",
     ),
     # Search and inspect.
     Case("grep -rn", "grep -rn TODO /project/src | sort"),
     Case(
         "grep -rl --include",
         "grep -rl --include='*.py' greet /project | sort",
-        gap="grep has no --include",
     ),
     Case("grep -c no match", "grep -c nothing /project/plan.yaml; echo rc=$?"),
     Case("find -type f | sort", "cd /project && find . -type f | sort"),
@@ -84,8 +81,21 @@ CASES: list[Case] = [
     Case(
         "sort | uniq -c | sort -rn",
         "sort /project/words.txt | uniq -c | sort -rn | head -1",
-        gap="sort does not split combined flags",
     ),
+    Case("head several files", "cd /project && head -2 plan.yaml words.txt"),
+    Case("tail -n +N", "tail -n +12 /project/plan.yaml"),
+    Case("grep -r relative", "cd /project && grep -rn VALUE src"),
+    Case("grep -r no folder", "cd /project/src && grep -rl greet | sort"),
+    Case(
+        "grep missing file",
+        "grep -h id /project/plan.yaml /nope | wc -l; grep -q x /nope; echo rc=$?",
+    ),
+    Case("sort -k2n", "printf 'b 10\\na 9\\nc 100\\n' | sort -k2n"),
+    Case("sort -t -k", "printf 'x,3\\ny,1\\n' | sort -t, -k2 | head -1"),
+    Case("uniq -cd", "sort /project/words.txt | uniq -cd"),
+    Case("cat | wc all counts", "cat /project/words.txt | wc"),
+    Case("wc file", "wc /project/plan.yaml"),
+    Case("ls file and folder", "ls /project/plan.yaml /project/src"),
     Case("head -n file", "head -n 3 /project/src/app.py"),
     Case("sed -n range", "sed -n '2,4p' /project/plan.yaml"),
     Case(
@@ -122,10 +132,14 @@ CASES: list[Case] = [
         "mkdir -p out/a/b && echo hi > out/a/b/c.txt && cat out/a/b/c.txt",
     ),
     Case("cp -r", "cp -r /project/src src2 && find src2 -type f | sort"),
+    Case("cp -r into folder", "mkdir dst && cp -r /project/src dst && find dst | sort"),
+    Case(
+        "cp files into folder",
+        "mkdir dst && cp /project/plan.yaml /project/README.md dst && ls dst",
+    ),
     Case(
         "cp -r into itself",
         "mkdir -p d && cp -r d d/e; echo rc=$?; ls d",
-        gap="cp -r recurses into its own output",
     ),
     Case("&& then >", "echo a && echo b > f; echo --; cat f"),
     Case("| then >", "echo a | tr a b > f && cat f"),
@@ -163,7 +177,6 @@ CASES: list[Case] = [
     Case(
         "wc missing file",
         "cd /project && wc -l plan.yaml nope words.txt; echo rc=$?",
-        gap="wc pads its counts unlike GNU",
     ),
     Case("sleep short", "sleep 0.1; echo slept"),
     # python with the bundled PyYAML.

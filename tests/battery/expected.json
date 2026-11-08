@@ -119,6 +119,50 @@
     "stdout": "      3 beta\n",
     "exit_code": 0
   },
+  "head several files": {
+    "stdout": "==> plan.yaml <==\nlevels:\n  - id: pb\n\n==> words.txt <==\nalpha\nbeta\n",
+    "exit_code": 0
+  },
+  "tail -n +N": {
+    "stdout": "  - id: silla-1\n    asset: chair\n",
+    "exit_code": 0
+  },
+  "grep -r relative": {
+    "stdout": "src/sub/deep.py:1:VALUE = 42\n",
+    "exit_code": 0
+  },
+  "grep -r no folder": {
+    "stdout": "app.py\nutil.py\n",
+    "exit_code": 0
+  },
+  "grep missing file": {
+    "stdout": "4\nrc=2\n",
+    "exit_code": 0
+  },
+  "sort -k2n": {
+    "stdout": "a 9\nb 10\nc 100\n",
+    "exit_code": 0
+  },
+  "sort -t -k": {
+    "stdout": "y,1\n",
+    "exit_code": 0
+  },
+  "uniq -cd": {
+    "stdout": "      2 alpha\n      3 beta\n",
+    "exit_code": 0
+  },
+  "cat | wc all counts": {
+    "stdout": "      6       6      33\n",
+    "exit_code": 0
+  },
+  "wc file": {
+    "stdout": " 13  31 176 /project/plan.yaml\n",
+    "exit_code": 0
+  },
+  "ls file and folder": {
+    "stdout": "/project/plan.yaml\n\n/project/src:\napp.py\nsub\nutil.py\n",
+    "exit_code": 0
+  },
   "head -n file": {
     "stdout": "import sys\n\nfrom util import greet\n",
     "exit_code": 0
@@ -169,6 +213,14 @@
   },
   "cp -r": {
     "stdout": "src2/app.py\nsrc2/sub/deep.py\nsrc2/util.py\n",
+    "exit_code": 0
+  },
+  "cp -r into folder": {
+    "stdout": "dst\ndst/src\ndst/src/app.py\ndst/src/sub\ndst/src/sub/deep.py\ndst/src/util.py\n",
+    "exit_code": 0
+  },
+  "cp files into folder": {
+    "stdout": "README.md\nplan.yaml\n",
     "exit_code": 0
   },
   "cp -r into itself": {
