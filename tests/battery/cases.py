@@ -227,6 +227,13 @@ CASES: list[Case] = [
     Case("wc -l < <(...)", "wc -l < <(printf '1\\n2\\n')"),
     Case("while read < <(...)", "while read l; do echo got $l; done < <(echo q)"),
     Case("<(...) leaves no file", "cat <(echo hi) >/dev/null; ls | wc -l"),
+    # Long loops: the call's deadline bounds them, not a count.
+    Case(
+        "while read 2000 lines",
+        "seq 2000 > f; n=0; while read l; do n=$((n+1)); done < f; echo $n",
+    ),
+    Case("until 2000", "i=0; until [ $i -ge 2000 ]; do i=$((i+1)); done; echo $i"),
+    Case("for (( )) 2000", "for ((i=0; i<2000; i++)); do :; done; echo $i"),
     # python with the bundled PyYAML.
     Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
     Case(

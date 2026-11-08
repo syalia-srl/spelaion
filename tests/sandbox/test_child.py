@@ -16,7 +16,7 @@ import pytest
 from spelaion import Limits, Mount, Result, Sandbox
 from spelaion._child import GRACE, TEST_GRACE
 
-# The emulated awk has no loops and shell loops stop at an iteration limit;
+# The emulated awk has no loops and shell loops stop after a million iterations;
 # a catastrophic regex is what runs forever.
 RUNAWAY = "printf '%s!\\n' " + "a" * 46 + " | grep -E '(a+)+$'"
 

@@ -61,7 +61,7 @@ from spelaion.exec.redirs import (
 )
 from spelaion.exec.tool_dispatch import dispatch_tool
 from spelaion.runtime.result import CommandResult
-from spelaion.runtime.state import TimeoutExpired
+from spelaion.runtime.state import LoopLimit, TimeoutExpired
 from spelaion.semantics.resolve import resolve_command
 
 if TYPE_CHECKING:
@@ -402,7 +402,7 @@ class CommandEvaluator:
     ) -> CommandResult:
         result = CommandResult(exit_code=0)
         iterations = 0
-        max_iter = self.policy.config.max_recursion_depth * 10
+        max_iter = self._max_loop_iterations()
         while True:
             cond_result = self.execute_node(node.condition, io)
             if (cond_result.exit_code == 0) == break_on_success:
@@ -418,14 +418,24 @@ class CommandEvaluator:
                     raise ContinueSignal(sig.levels - 1) from None
                 iterations += 1
                 if iterations > max_iter:
-                    io.stderr.write("spelaion: loop iteration limit reached\n")
+                    self._loop_limit(io, "loop")
                     break
                 continue
             iterations += 1
             if iterations > max_iter:
-                io.stderr.write("spelaion: loop iteration limit reached\n")
+                self._loop_limit(io, "loop")
                 break
         return result
+
+    def _max_loop_iterations(self) -> int:
+        cap = self.policy.config.max_loop_iterations
+        return self.policy.config.max_recursion_depth * 10 if cap is None else cap
+
+    def _loop_limit(self, io: IOContext, kind: str) -> None:
+        """Report a loop past its cap; stop the script if the policy says so."""
+        io.stderr.write(f"spelaion: {kind} iteration limit reached\n")
+        if self.policy.config.max_loop_iterations is not None:
+            raise LoopLimit
 
     def _execute_for(self, node: ForLoop, io: IOContext) -> CommandResult:
         result = CommandResult(exit_code=0)
@@ -494,7 +504,7 @@ class CommandEvaluator:
         if node.init:
             self.arith_ev.eval_statement(node.init)
         iterations = 0
-        max_iter = self.policy.config.max_recursion_depth * 10
+        max_iter = self._max_loop_iterations()
         while True:
             # Evaluate condition (empty condition = true)
             if node.condition:
@@ -512,9 +522,7 @@ class CommandEvaluator:
                     raise ContinueSignal(sig.levels - 1) from None
                 iterations += 1
                 if iterations > max_iter:
-                    io.stderr.write(
-                        "spelaion: C-style for loop iteration limit reached\n"
-                    )
+                    self._loop_limit(io, "C-style for loop")
                     break
                 # Evaluate update before continuing
                 if node.update:
@@ -522,7 +530,7 @@ class CommandEvaluator:
                 continue
             iterations += 1
             if iterations > max_iter:
-                io.stderr.write("spelaion: C-style for loop iteration limit reached\n")
+                self._loop_limit(io, "C-style for loop")
                 break
             # Evaluate update
             if node.update:
@@ -586,7 +594,7 @@ class CommandEvaluator:
             io = IOContext(stderr=self._stderr)
             try:
                 status = self.execute_node(program, io).exit_code
-            except (MemoryError, TimeoutExpired):
+            except (MemoryError, TimeoutExpired, LoopLimit):
                 # The call's own limits: they end the call, not this command.
                 raise
             except ReturnSignal as sig:
