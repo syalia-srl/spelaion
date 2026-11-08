@@ -21,6 +21,7 @@ files:
   - chapters/09-harnesses.md
   - chapters/10-the-shell.md
   - chapters/11-testing-with-bash.md
+  - chapters/20-architecture.md
 
 outputs:
   site:
