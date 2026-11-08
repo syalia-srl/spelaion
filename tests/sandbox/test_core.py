@@ -153,6 +153,13 @@ def test_same_host_folder_twice_rejected(tmp_path: Path) -> None:
         Sandbox([Mount("/a", tmp_path), Mount("/b", tmp_path, readonly=True)])
 
 
+def test_same_sandbox_path_twice_rejected(tmp_path: Path) -> None:
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    with pytest.raises(ValueError, match="same sandbox path"):
+        Sandbox([Mount("/x", tmp_path / "a"), Mount("/x/", tmp_path / "b")])
+
+
 def test_sibling_folders_with_shared_prefix_allowed(tmp_path: Path) -> None:
     (tmp_path / "ab").mkdir()
     (tmp_path / "abc").mkdir()
