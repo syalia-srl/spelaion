@@ -46,6 +46,9 @@ dev = [
     "tach>=0.20",
     "pre-commit>=4.0",
 ]
+docs = [
+    "scriptorium[pdf] ; python_full_version >= '3.12'",
+]
 
 [project.scripts]
 spelaion = "spelaion.cli.main:main"
@@ -55,6 +58,9 @@ packages = ["src/spelaion"]
 
 [tool.uv]
 default-groups = ["dev"]
+
+[tool.uv.sources]
+scriptorium = { git = "https://github.com/apiad/scriptorium", rev = "v0.14.0" }
 
 # --------------------------------------------------------------------------
 # Testing

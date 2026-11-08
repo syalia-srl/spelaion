@@ -34,3 +34,8 @@ htmlcov/
 # Environment
 .env
 .env.local
+
+# The book
+docs/site/
+docs/.scriptorium/
+docs/build/
