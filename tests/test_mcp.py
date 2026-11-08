@@ -421,19 +421,41 @@ def test_mcp_server_is_in_dir() -> None:
     assert "__version__" in dir(spelaion)
 
 
+class _Records(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
 def test_serving_leaves_the_products_uvicorn_logging_alone(sb: Sandbox) -> None:
-    logger = logging.getLogger("uvicorn.error")
-    handler = logging.NullHandler()
-    before = logger.level
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
+    loggers = [logging.getLogger("uvicorn.error"), logging.getLogger("uvicorn.access")]
+    handlers = [_Records() for _ in loggers]
+    saved = [(lg.level, lg.propagate) for lg in loggers]
+    for logger, handler in zip(loggers, handlers, strict=True):
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        logger.propagate = True
     try:
-        sb.serve_mcp().stop()
-        assert handler in logger.handlers
-        assert logger.level == logging.DEBUG
+        server = sb.serve_mcp()
+        try:
+            status(server.url, {})
+        finally:
+            server.stop()
+        for logger, handler in zip(loggers, handlers, strict=True):
+            assert handler in logger.handlers
+            assert logger.level == logging.DEBUG
+            assert logger.propagate is True
+        assert handlers[1].records == []
     finally:
-        logger.removeHandler(handler)
-        logger.setLevel(before)
+        for logger, handler, (level, propagate) in zip(
+            loggers, handlers, saved, strict=True
+        ):
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+            logger.propagate = propagate
 
 
 def test_server_threads_are_named_apart(sb: Sandbox) -> None:

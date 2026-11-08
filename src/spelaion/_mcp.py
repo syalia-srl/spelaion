@@ -45,6 +45,15 @@ class _QuietWhileStopping(logging.Filter):
 
 logging.getLogger("uvicorn.error").addFilter(_QuietWhileStopping())
 
+
+# A line per request would flood the product's access log.
+class _NoAccessLines(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not (record.threadName or "").startswith("spelaion-mcp-")
+
+
+logging.getLogger("uvicorn.access").addFilter(_NoAccessLines())
+
 # Numbers server threads apart: a port is reused once a server stops.
 _serial = itertools.count(1)
 
@@ -85,10 +94,10 @@ class McpServer:
             app = _BearerToken(app, token)
         config = uvicorn.Config(
             app,
-            # The product's own uvicorn loggers keep its handlers and levels;
-            # a line per request would flood them.
+            # The product's own uvicorn loggers keep their handlers, levels
+            # and propagation: uvicorn resets uvicorn.access when
+            # access_log is False, so its lines are filtered out instead.
             log_config=None,
-            access_log=False,
             timeout_graceful_shutdown=_GRACEFUL_S,
         )
         self._server = uvicorn.Server(config)
