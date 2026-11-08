@@ -97,7 +97,8 @@ def main(
     while True:
         try:
             msg: ToChild = conn.recv()
-        except EOFError:
+        except (EOFError, ConnectionResetError):
+            # The parent is gone (closed, or killed without closing us).
             return
         if msg[0] == "register":
             shell.tools.register(msg[1], _HostProxy(msg[1], conn, shell, bound))
