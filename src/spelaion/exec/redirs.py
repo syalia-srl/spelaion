@@ -50,7 +50,15 @@ def apply_redirections(  # noqa: C901
         fd = redir.fd
         abs_path = vfs.resolve(target_path, state.cwd)
 
-        if op == "<<":
+        if abs_path == "/dev/null" and op in (">", ">>", "2>", "2>>", "<"):
+            # No mount holds /dev: discard the output, or read nothing.
+            if op == "<":
+                io_ctx.stdin = StringIO()
+            elif op.startswith("2") or fd == 2:
+                io_ctx.stderr = StringIO()
+            else:
+                io_ctx.stdout = StringIO()
+        elif op == "<<":
             # Here-doc: target word contains the document body
             io_ctx.stdin = StringIO(target_path)
         elif op == "<<<":
