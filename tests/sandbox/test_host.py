@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import argparse
 import shutil
+import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
-from spelaion import HostContext, Limits, Mount, Result, Sandbox
-from spelaion._host import MAX_IMAGE
+from spelaion import Attachment, HostContext, Limits, Mount, Result, Sandbox
+from spelaion._host import MAX_ATTACHED, MAX_ATTACHMENTS, MAX_IMAGE
 
 PNG_FIXTURE = Path(__file__).parent / "data" / "pixel.png"
 JPEG = b"\xff\xd8\xff\xe0" + b"\0" * 16
@@ -366,3 +368,120 @@ def test_attach_sandbox_path_and_mime_sniffed(sb: Sandbox, rw: Path) -> None:
     assert [(a.mime, a.name) for a in r.attachments] == [
         ("image/png", "/scratch/v.png")
     ]
+
+
+# --- Fix round 1 ------------------------------------------------------------
+
+
+def test_argparse_handler_exits_cleanly(sb: Sandbox) -> None:
+    @sb.command
+    def cli(ctx: HostContext, args: list[str]) -> Result:
+        parser = argparse.ArgumentParser(prog="cli")
+        parser.add_argument("--n", type=int)
+        return Result(stdout=f"{parser.parse_args(args).n}\n")
+
+    assert sb.bash("cli --help").exit_code == 0
+    assert sb.bash("cli --n x").exit_code == 2
+    assert sb.bash("cli --n 3").stdout == "3\n"
+
+
+@pytest.mark.parametrize(
+    ("code", "stderr", "exit_code"),
+    [(None, "", 0), (3, "", 3), ("cannot go on", "quit: cannot go on\n", 1)],
+)
+def test_system_exit_is_a_result(
+    sb: Sandbox, code: int | str | None, stderr: str, exit_code: int
+) -> None:
+    @sb.command
+    def quit(ctx: HostContext, args: list[str]) -> Result:
+        sys.exit(code)
+
+    r = sb.bash("quit")
+    assert (r.stderr, r.exit_code) == (stderr, exit_code)
+    assert sb.bash("echo next").stdout == "next\n"
+
+
+def test_keyboard_interrupt_reaches_the_product(sb: Sandbox) -> None:
+    @sb.command
+    def stop(ctx: HostContext, args: list[str]) -> Result:
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        sb.bash("stop; echo after")
+    assert sb.bash("echo next").stdout == "next\n"
+
+
+def test_too_many_images_in_one_call(sb: Sandbox, rw: Path) -> None:
+    shutil.copy(PNG_FIXTURE, rw / "v.png")
+    r = sb.bash("for i in $(seq 9); do show v.png; done")
+    assert len(r.attachments) == MAX_ATTACHMENTS == 8
+    assert r.exit_code == 1
+    assert r.stderr == "show: too many images in one call\n"
+
+
+def test_images_too_large_for_one_call(sb: Sandbox, rw: Path) -> None:
+    big = PNG_FIXTURE.read_bytes() + b"\0" * (MAX_IMAGE - 2**10)
+    (rw / "v.png").write_bytes(big)
+    r = sb.bash("show v.png v.png v.png v.png v.png")
+    assert len(r.attachments) * len(big) <= MAX_ATTACHED == 20 * 2**20
+    assert len(r.attachments) == 4
+    assert r.exit_code == 1
+    assert r.stderr == "show: images too large for one call\n"
+
+
+def test_returned_attachments_are_bounded(sb: Sandbox) -> None:
+    image = Attachment("image/png", PNG_FIXTURE.read_bytes(), "p")
+
+    @sb.command
+    def flood(ctx: HostContext, args: list[str]) -> Result:
+        return Result(attachments=[image] * 300)
+
+    r = sb.bash("flood")
+    assert r.exit_code == 1 and len(r.attachments) == 8
+    assert r.stderr == "flood: too many images in one call\n"
+
+
+@pytest.mark.parametrize("command", ['take "$x"', 'echo "$x" | take'])
+def test_input_too_large(rw: Path, command: str) -> None:
+    (rw / "big").write_text("x" * 5_000_000)
+    seen: list[int] = []
+    limits = Limits(max_output=10_000)
+    with Sandbox([Mount("/scratch", rw)], cwd="/scratch", limits=limits) as s:
+
+        @s.command
+        def take(ctx: HostContext, args: list[str]) -> Result:
+            seen.append(len(ctx.stdin) + sum(map(len, args)))
+            return Result(stdout="taken\n")
+
+        r = s.bash(f"x=$(cat big); {command}")
+        assert r.exit_code == 1 and r.stderr == "take: input too large\n"
+        assert seen == []
+        assert s.bash("take small").stdout == "taken\n"
+
+
+def test_exception_message_names_no_host_path(sb: Sandbox, rw: Path) -> None:
+    @sb.command
+    def parse(ctx: HostContext, args: list[str]) -> Result:
+        raise ValueError(f"cannot parse {ctx.path('f.toml')}; see {rw}")
+
+    r = sb.bash("parse")
+    assert r.stderr == "parse: cannot parse /scratch/f.toml; see /scratch\n"
+
+
+def test_exception_message_hides_the_host_as_given(tmp_path: Path, rw: Path) -> None:
+    link = tmp_path / "link"
+    link.symlink_to(rw)
+    with Sandbox([Mount("/scratch", link)], cwd="/scratch") as s:
+
+        @s.command
+        def parse(ctx: HostContext, args: list[str]) -> Result:
+            raise ValueError(f"{link}/f.toml and {ctx.path('g')}, not {rw}x")
+
+        r = s.bash("parse")
+    assert r.stderr == f"parse: /scratch/f.toml and /scratch/g, not {rw}x\n"
+
+
+@pytest.mark.parametrize("word", ["if", "then", "done", "in", "function", "time"])
+def test_keyword_is_not_a_command_name(sb: Sandbox, word: str) -> None:
+    with pytest.raises(ValueError, match="is a shell keyword"):
+        sb.command(word)

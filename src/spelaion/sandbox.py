@@ -19,9 +19,18 @@ from types import TracebackType
 from typing import Any, TypeVar, cast, overload
 
 from spelaion import _child
-from spelaion._host import HostContext, HostHandler, show
+from spelaion._host import HostContext, HostHandler, add_attachment, show
 from spelaion._types import Attachment, Limits, Result
-from spelaion._wire import Call, HostResult, Ready, Register, ToParent
+from spelaion._wire import (
+    BadMessage,
+    Call,
+    HostResult,
+    Ready,
+    Register,
+    ToParent,
+    decode,
+    max_message,
+)
 from spelaion.semantics.resolve import BUILTIN_NAMES
 from spelaion.vfs.mounts import Mount, MountFs
 
@@ -38,6 +47,12 @@ _REAP_TIMEOUT_S = 5
 
 # Letters, digits, "-", "_" and "."; a leading "-" would read as an option.
 _COMMAND_NAME = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_.-]*")
+
+# Words the parser reads as syntax wherever a command name could stand.
+_KEYWORDS = frozenset(
+    {"if", "then", "else", "elif", "fi", "do", "done", "case", "esac", "while"}
+    | {"until", "for", "in", "function", "select", "time"}
+)
 
 _log = logging.getLogger("spelaion")
 
@@ -96,6 +111,15 @@ class Sandbox:
         self._cwd = cwd
         self._env = dict(env or {})
         self._fs = fs
+        # Each mount's host folder, resolved and as given, longest first: an
+        # exception's text names its sandbox path instead.
+        hosts = {str(Path(m.host).resolve()): m.path for m in mounts}
+        hosts.update(
+            {str(Path(m.host)): m.path for m in mounts if os.path.isabs(m.host)}
+        )
+        self._host_roots = sorted(
+            ((h, p) for h, p in hosts.items() if h != "/"), key=lambda hp: -len(hp[0])
+        )
         self._handlers: dict[str, HostHandler] = {"show": show}
         # What the child knows: all of these at start, the rest by "register".
         self._host_names: set[str] = set(self._handlers)
@@ -132,14 +156,18 @@ class Sandbox:
         is ``oikos-check``. The function is returned unchanged. It runs in
         this process, called as ``handler(ctx, args)`` with a
         :class:`HostContext` and the arguments as the shell expanded them,
-        and returns a :class:`Result`. An exception it raises becomes
-        ``name: message`` on stderr with exit code 1.
+        and returns a :class:`Result`, which carries all of its output:
+        what it prints goes to this process's own stdout and stderr, not the
+        agent's. An exception it raises becomes ``name: message`` on stderr
+        with exit code 1. ``SystemExit`` (argparse's, say) ends the command
+        with its code, or with its message and exit code 1. A
+        ``KeyboardInterrupt`` ends the command and is raised from the call.
 
         ``ctx.remaining_s`` is the time left before the call's deadline,
         measured here. A handler that runs past it is not interrupted, but
         the call then returns the timeout result (exit 124) and the child
         restarts. Registering works before or after the first call; a name
-        must be a command word, not a builtin, and not taken.
+        must be a command word, not a shell keyword or builtin, and not taken.
         """
         if callable(name):
             return self._register(name.__name__.replace("_", "-"), name)
@@ -173,8 +201,10 @@ class Sandbox:
         return self._process.pid
 
     def _check_name(self, name: str) -> None:
-        if not _COMMAND_NAME.fullmatch(name) or not name.isascii():
+        if not _COMMAND_NAME.fullmatch(name):
             raise ValueError(f"{name!r} is not a command name")
+        if name in _KEYWORDS:
+            raise ValueError(f"{name} is a shell keyword")
         if name in BUILTIN_NAMES:
             raise ValueError(f"{name} is a builtin command")
 
@@ -213,11 +243,21 @@ class Sandbox:
         )
         try:
             result = cast(object, handler(ctx, args))
+        except SystemExit as e:
+            if e.code is None or isinstance(e.code, int):
+                return Result(exit_code=int(e.code or 0))
+            text = self._hide_hosts(str(e.code))
+            return Result(stderr=f"{name}: {text}\n", exit_code=1)
         except Exception as e:
             return Result(stderr=f"{name}: {self._describe(e, ctx)}\n", exit_code=1)
         if not isinstance(result, Result):
             raise TypeError(f"host command {name} returned {type(result).__name__}")
-        self._attachments.extend(result.attachments)
+        try:
+            for attachment in result.attachments:
+                add_attachment(self._attachments, attachment)
+        except ValueError as e:
+            stderr = f"{result.stderr}{name}: {e}\n"
+            return Result(stdout=result.stdout, stderr=stderr, exit_code=1)
         # The child needs only the text; images stay here for the call's Result.
         return Result(
             stdout=result.stdout, stderr=result.stderr, exit_code=result.exit_code
@@ -226,12 +266,23 @@ class Sandbox:
     def _describe(self, e: Exception, ctx: HostContext) -> str:
         """A handler's exception as a message that names no host path."""
         if not isinstance(e, OSError):
-            return str(e) or type(e).__name__
+            return self._hide_hosts(str(e) or type(e).__name__)
         reason = e.strerror or (os.strerror(e.errno) if e.errno else type(e).__name__)
         if any(e is r for r in ctx._raised):  # pyright: ignore[reportPrivateUsage]
-            return f"{e.filename}: {reason}"
+            return self._hide_hosts(f"{e.filename}: {reason}")
         shown = self._sandbox_path(e.filename)
-        return f"{shown}: {reason}" if shown else reason
+        return self._hide_hosts(f"{shown}: {reason}" if shown else reason)
+
+    def _hide_hosts(self, text: str) -> str:
+        """*text* with each mount's host folder written as its sandbox path."""
+        for host, path in self._host_roots:
+            # The host folder itself, or a path under it, not a longer name.
+            text = re.sub(
+                re.escape(host) + r"(/|(?![\w.-]))",
+                lambda m, path=path: path.rstrip("/") + "/" if m[1] else path,
+                text,
+            )
+        return text
 
     def _sandbox_path(self, filename: object) -> str | None:
         """The sandbox path for a host path inside a mount, else None."""
@@ -252,14 +303,20 @@ class Sandbox:
             if self._process.poll() is not None:
                 self._restart()
             try:
-                return self._exchange(kind, payload)
-            except (BrokenPipeError, ConnectionResetError):
-                # The child died before reading the call, so it never ran.
+                try:
+                    return self._exchange(kind, payload)
+                except (BrokenPipeError, ConnectionResetError):
+                    # The child died before reading the call, so it never ran.
+                    self._restart()
+                try:
+                    return self._exchange(kind, payload)
+                except (EOFError, OSError):
+                    return self._died()
+            except KeyboardInterrupt:
+                # The child is somewhere in the call; the next one needs a
+                # child that is not.
                 self._restart()
-            try:
-                return self._exchange(kind, payload)
-            except (EOFError, OSError):
-                return self._died()
+                raise
 
     def _exchange(self, kind: str, payload: dict[str, Any]) -> Result:
         """Send one call and serve the child until it is done or the deadline.
@@ -273,6 +330,8 @@ class Sandbox:
                 self._await_ready()
         except EOFError:
             return self._died()
+        except BadMessage as e:
+            return self._refused(e)
         self._announce()
         timeout = self.limits.timeout_s
         deadline = time.monotonic() + timeout
@@ -283,14 +342,23 @@ class Sandbox:
         served = False
         try:
             while self._wait(deadline):
-                msg: ToParent = self._conn.recv()
+                msg = cast(ToParent, self._recv("done", "host"))
                 if msg[0] == "done":
                     result = msg[1]
                     result.attachments = self._attachments
                     return result
                 served = True
-                reply: HostResult = ("host_result", self._host(*msg[1:]))
+                try:
+                    reply: HostResult = ("host_result", self._host(*msg[1:]))
+                except KeyboardInterrupt:
+                    # Answer so the child is not left waiting; _call then
+                    # restarts it, since its done would answer the next call.
+                    stopped = Result(stderr=f"{msg[1]}: interrupted\n", exit_code=130)
+                    self._conn.send(("host_result", stopped))
+                    raise
                 self._conn.send(reply)
+        except BadMessage as e:
+            return self._refused(e)
         # Past the deadline, a dead child is a timeout: its own timer
         # (timeout_s + GRACE) ends it while a slow host command runs here.
         except EOFError:
@@ -317,10 +385,24 @@ class Sandbox:
         if not self._conn.poll(_START_TIMEOUT_S):
             self._process.kill()
             raise EOFError
-        msg: Ready = self._conn.recv()
-        if msg[0] != "ready":
-            raise RuntimeError(f"unexpected message from the child: {msg[0]}")
+        self._recv("ready")
         self._ready = True
+
+    def _recv(self, *tags: str) -> ToParent | Ready:
+        """The child's next message, one of *tags*; raises BadMessage."""
+        try:
+            data = self._conn.recv_bytes(max_message(self.limits))
+        except OSError:
+            # Connection stops reading after a message past maxlength.
+            if not self._conn.readable:
+                raise BadMessage("an oversized message") from None
+            raise
+        return decode(data, tags)
+
+    def _refused(self, e: BadMessage) -> Result:
+        """The child broke the protocol: it is not trusted to go on."""
+        self._restart()
+        return Result(stderr=f"spelaion: child sent {e}; restarted\n", exit_code=125)
 
     def _died(self) -> Result:
         try:
@@ -338,7 +420,9 @@ class Sandbox:
     ) -> Result:
         try:
             return self._serve_host(name, args, stdin, cwd, env)
-        except Exception:
+        except KeyboardInterrupt:
+            raise
+        except BaseException:
             # The child waits for an answer; a failure must still send one.
             _log.exception("internal error running host command %s", name)
             return Result(stderr=f"{name}: internal error\n", exit_code=1)

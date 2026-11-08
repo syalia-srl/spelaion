@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from spelaion._shell import OUT_OF_MEMORY, Shell
 from spelaion._types import Limits, Result
-from spelaion._wire import TEST_HOOKS, Done, Host, Ready, ToChild
+from spelaion._wire import TEST_HOOKS, Done, Host, Ready, ToChild, max_message
 from spelaion.commands import python_cmd as python_cmds
 from spelaion.runtime.result import CommandResult
 from spelaion.vfs.mounts import Mount, MountFs
@@ -84,11 +84,13 @@ def main(
     python_cmd = _Python(limits, python) if python is not None else None
     if python_cmd is not None:
         python_cmds.install(python_cmd)
+    bound = max_message(limits)
     for name in host_names:
-        shell.tools.register(name, _HostProxy(name, conn, shell))
+        shell.tools.register(name, _HostProxy(name, conn, shell, bound))
     grace = GRACE
     if os.environ.get(TEST_HOOKS) == "1":
         shell.tools.register("kill_self_for_test", _KillSelf())
+        shell.tools.register("forge_for_test", _Forge(conn, bound))
         grace = float(os.environ.get(TEST_GRACE, GRACE))
     ready: Ready = ("ready",)
     conn.send(ready)
@@ -98,7 +100,7 @@ def main(
         except EOFError:
             return
         if msg[0] == "register":
-            shell.tools.register(msg[1], _HostProxy(msg[1], conn, shell))
+            shell.tools.register(msg[1], _HostProxy(msg[1], conn, shell, bound))
             continue
         if msg[0] != "call":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
@@ -149,13 +151,15 @@ class _HostProxy:
     """Runs host command *name* in the parent and waits for its result.
 
     The executor calls :meth:`invoke_in` with the calling shell's state, so
-    the parent sees the live cwd and exported variables.
+    the parent sees the live cwd and exported variables. A request over
+    *bound* bytes, which the parent would refuse, is never sent.
     """
 
-    def __init__(self, name: str, conn: Connection, shell: Shell) -> None:
+    def __init__(self, name: str, conn: Connection, shell: Shell, bound: int) -> None:
         self._name = name
         self._conn = conn
         self._shell = shell
+        self._bound = bound
 
     @property
     def name(self) -> str:
@@ -173,7 +177,10 @@ class _HostProxy:
         self, args: list[str], stdin: str | None, cwd: str, env: dict[str, str]
     ) -> CommandResult:
         request: Host = ("host", self._name, list(args), stdin or "", cwd, env)
-        self._conn.send(request)
+        data = pickle.dumps(request)
+        if len(data) > self._bound:
+            return CommandResult(exit_code=1, stderr=f"{self._name}: input too large\n")
+        self._conn.send_bytes(data)
         msg = self._conn.recv()
         if msg[0] != "host_result":
             raise RuntimeError(f"unexpected message from the parent: {msg[0]}")
@@ -192,3 +199,40 @@ class _KillSelf:
 
     def invoke(self, args: list[str], stdin: str | None = None) -> CommandResult:
         os._exit(9)
+
+
+class _Forge:
+    """Test only: send the parent a message it must refuse, then wait to die.
+
+    ``forge_for_test class MARKER`` sends a pickle that would create MARKER
+    if the parent loaded any class; ``big`` one past the size bound;
+    ``shape`` a message of the wrong shape.
+    """
+
+    def __init__(self, conn: Connection, bound: int) -> None:
+        self._conn = conn
+        self._bound = bound
+
+    @property
+    def name(self) -> str:
+        return "forge_for_test"
+
+    def invoke(self, args: list[str], stdin: str | None = None) -> CommandResult:
+        if args[0] == "class":
+            self._conn.send_bytes(pickle.dumps(("done", _Opens(args[1]))))
+        elif args[0] == "big":
+            self._conn.send_bytes(b"\0" * (self._bound + 1))
+        else:
+            self._conn.send(("host", 1))
+        try:
+            self._conn.recv()
+        finally:
+            os._exit(1)
+
+
+class _Opens:
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def __reduce__(self) -> tuple[object, tuple[str, str]]:
+        return (open, (self.path, "w"))

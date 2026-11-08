@@ -354,3 +354,24 @@ def test_slow_host_command_times_out(
         assert r.stderr == "spelaion: timed out after 0.5s\n"
         assert not psutil_like_alive(pid)
         assert s.bash("echo ok").stdout == "ok\n"
+
+
+def test_forged_class_is_not_loaded(sb: Sandbox, tmp_path: Path) -> None:
+    marker = tmp_path / "marker"
+    r = sb.bash(f"forge_for_test class {marker}")
+    assert r.exit_code == 125
+    assert r.stderr == "spelaion: child sent a bad message; restarted\n"
+    assert not marker.exists()
+    assert sb.bash("echo next").stdout == "next\n"
+
+
+@pytest.mark.parametrize(
+    ("kind", "what"),
+    [("big", "an oversized message"), ("shape", "a bad message")],
+)
+def test_bad_message_restarts_the_child(sb: Sandbox, kind: str, what: str) -> None:
+    pid = sb._child_pid  # pyright: ignore[reportPrivateUsage]
+    r = sb.bash(f"forge_for_test {kind}")
+    assert (r.stderr, r.exit_code) == (f"spelaion: child sent {what}; restarted\n", 125)
+    assert sb._child_pid != pid  # pyright: ignore[reportPrivateUsage]
+    assert sb.bash("echo next").stdout == "next\n"
