@@ -3,6 +3,8 @@
 __version__ = "0.1.0"
 
 from spelaion._host import HostContext, HostHandler
+from spelaion._mcp import McpServer
+from spelaion._tools import Tool, ToolOutput
 from spelaion._types import Attachment, Limits, Result
 from spelaion.api.bash import (
     Bash,
@@ -22,9 +24,12 @@ __all__ = [
     "HostContext",
     "HostHandler",
     "Limits",
+    "McpServer",
     "Mount",
     "Result",
     "RunResult",
     "Sandbox",
+    "Tool",
+    "ToolOutput",
     "define_command",
 ]
