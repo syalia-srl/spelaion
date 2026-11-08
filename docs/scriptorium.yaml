@@ -16,6 +16,7 @@ files:
   - chapters/04-python.md
   - chapters/05-host-commands.md
   - chapters/06-images.md
+  - chapters/07-own-loop.md
 
 outputs:
   site:
