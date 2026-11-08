@@ -14,6 +14,8 @@ from spelaion._types import Attachment, Result
 from spelaion.vfs.mounts import MountFs
 
 MAX_IMAGE = 5 * 2**20  # bytes, one attachment
+MAX_ATTACHMENTS = 8  # per call
+MAX_ATTACHED = 20 * 2**20  # bytes, all of a call's attachments
 
 _MIMES = ("image/png", "image/jpeg", "image/webp")
 
@@ -46,6 +48,11 @@ class HostContext:
 
         Raises FileNotFoundError outside every mount, PermissionError for a
         symlink that leaves its mount or, with *write*, a read-only mount.
+
+        Call it with ``write=True`` before writing: the returned path writes
+        into a read-only mount too, since handlers are trusted. The check is
+        made now; a writer outside this call could still swap a component of
+        the path for a symlink before the handler opens it.
         """
         try:
             return self._fs.host_path(self._fs.resolve(p, self.cwd), write=write)
@@ -60,7 +67,7 @@ class HostContext:
 
         *data* is the image, or a sandbox path to read it from. *mime* is
         found from the data when not given. PNG, JPEG and WebP only, up to
-        5 MB; anything else raises ValueError.
+        5 MB each, 8 images and 20 MB a call; anything else raises ValueError.
         """
         if isinstance(data, str):
             shown = self._fs.resolve(data, self.cwd)
@@ -83,10 +90,19 @@ class HostContext:
                 raise ValueError(f"{shown}: not a PNG, JPEG or WebP image")
         elif mime not in _MIMES:
             raise ValueError(f"{mime} is not image/png, image/jpeg or image/webp")
-        self._attachments.append(Attachment(mime=mime, data=data, name=name))
+        add_attachment(self._attachments, Attachment(mime=mime, data=data, name=name))
 
 
 HostHandler = Callable[[HostContext, list[str]], Result]
+
+
+def add_attachment(attachments: list[Attachment], attachment: Attachment) -> None:
+    """Add *attachment* to a call's *attachments*, within the call's bounds."""
+    if len(attachments) >= MAX_ATTACHMENTS:
+        raise ValueError("too many images in one call")
+    if sum(len(a.data) for a in attachments) + len(attachment.data) > MAX_ATTACHED:
+        raise ValueError("images too large for one call")
+    attachments.append(attachment)
 
 
 def show(ctx: HostContext, args: list[str]) -> Result:
