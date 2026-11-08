@@ -205,7 +205,7 @@ Two details of the interface are easy to get wrong. `CommandResult` has
 wrote to `io`; the evaluator reads those streams and ignores the fields. Only
 `exit_code` travels back. And the `io` streams are the ones a call bounds, so
 a command that writes more than the call allows is truncated like any other
-([Bounding every call](03-limits.md)).
+([Bounding every call](bounding-every-call.html)).
 
 The rows keep the order of the files. GNU `join` requires sorted input and
 writes in key order, which agrees with this code when the inputs are sorted,
@@ -215,7 +215,7 @@ as they are in the example below.
 
 The block above imported the decorator and registered `join` in this process.
 `Bash` is the in-memory shell from [Testing shell scripts with
-Bash](11-testing-with-bash.md), and it dispatches through the same resolver as
+Bash](testing-shell-scripts-with-bash.html), and it dispatches through the same resolver as
 a `Sandbox`, so it should run the command:
 
 ```{python continue}
@@ -283,7 +283,7 @@ shutil.rmtree(folder)
 
 When one product needs a command at runtime, in its own process, the
 supported route is a host command, which [Host
-commands](05-host-commands.md) covers. For a command every agent should have,
+commands](giving-the-agent-powers-with-host-commands.html) covers. For a command every agent should have,
 the change belongs in the package.
 
 ## Where the file goes
@@ -348,7 +348,7 @@ which rewrites `tach.toml` from the imports it finds. A new module inside
 `spelaion.commands` that imports only `spelaion.runtime`, `spelaion.vfs` and
 `spelaion.exec` adds no edge, and the sync leaves the file as it is; run it
 anyway so the declaration and the code agree. [How spelaion is
-built](20-architecture.md) explains the edges.
+built](how-spelaion-is-built.html) explains the edges.
 
 ## The test next to the other command tests
 
@@ -548,5 +548,5 @@ the exit status the shell shows to the agent.
 The same steps apply to any missing command: write the function against
 `ShellState`, `Filesystem` and `IOContext`, put it in a module the package
 imports, and add the unit test and the battery case. [What the shell can
-do](10-the-shell.md) has the list of names already covered, and [How spelaion
-is built](20-architecture.md) explains which package the file belongs to.
+do](what-the-shell-can-do.html) has the list of names already covered, and [How spelaion
+is built](how-spelaion-is-built.html) explains which package the file belongs to.
