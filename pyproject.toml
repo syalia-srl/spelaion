@@ -65,6 +65,7 @@ pythonpath = ["src"]
 addopts = "--import-mode=importlib"
 markers = [
     "wasi: needs the CPython for WASI build (downloaded once into the cache)",
+    "harness: runs a real agent harness; only with SPELAION_HARNESS=1 and a login",
 ]
 
 # --------------------------------------------------------------------------
@@ -118,7 +119,7 @@ pythonPlatform = "All"
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
-include = ["src"]
+include = ["src", "examples"]
 exclude = ["tests", "**/__pycache__", "src/spelaion/python/vendor"]
 # Relaxations — only what's genuinely unfixable
 reportUnusedFunction = "warning"
