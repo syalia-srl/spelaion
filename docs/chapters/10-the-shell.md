@@ -77,7 +77,7 @@ print("exit code:", r.exit_code)
 An indexed array is written `names=(alpha beta gamma)` and read with
 `${names[1]}` or `${names[@]}`. `declare -a` does not make an array: it
 stores the text `(alpha beta gamma)` as a scalar, so write the assignment
-without it. An associative array needs `declare -A`; `${!sizes[@]}` lists
+without it ([#9](https://github.com/syalia-srl/spelaion/issues/9)). An associative array needs `declare -A`; `${!sizes[@]}` lists
 its keys.
 
 Parameter expansion includes defaults and alternates (`${v:-x}`,
@@ -107,12 +107,11 @@ print("exit code:", r.exit_code)
 
 The in-memory `Bash` class has a writable in-memory filesystem, so it runs
 the line; [Testing with bash](testing-shell-scripts-with-bash.html) covers that class.
-The README lists process substitution as supported, so treat the sandbox
-failure as a bug to watch.
+The sandbox failure is a bug, tracked in [#8](https://github.com/syalia-srl/spelaion/issues/8).
 
 Brace expansion is not supported either. `echo {a,b}` prints `{a,b}`, with
 no error, which is worse than a syntax error because the line looks as if
-it worked.
+it worked ([#7](https://github.com/syalia-srl/spelaion/issues/7)).
 
 ## Commands by purpose
 
