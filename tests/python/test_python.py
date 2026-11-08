@@ -372,6 +372,18 @@ def test_output_limit_stops_the_guest(sb_small: Sandbox) -> None:
     assert len(r.stdout) < 2 * _SMALL.max_output
 
 
+def test_output_past_the_file_size_cap(sb_small: Sandbox) -> None:
+    # One write past RLIMIT_FSIZE fails in the guest, which exits before the
+    # watcher looks.
+    r = sb_small.bash(
+        "python -c 'import os, sys\ntry:\n"
+        ' sys.stdout.write("x" * 2**21); sys.stdout.flush()\n'
+        "except OSError: os._exit(0)'"
+    )
+    assert r.exit_code == 1
+    assert r.stderr.endswith("python: output limit reached\n")
+
+
 def test_one_file_past_the_disk_cap(sb_small: Sandbox, tmp_path: Path) -> None:
     t = time.monotonic()
     r = sb_small.bash(
