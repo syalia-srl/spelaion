@@ -123,7 +123,10 @@ CASES: list[Case] = [
     Case(
         "append >>",
         "echo one > log && echo two >> log && cat log",
-        gap=">> writes once per enclosing redirection",
+    ),
+    Case(
+        "group >> and 2>&1",
+        "{ echo a; echo b; } >> g; echo c >> g 2>&1; cat g",
     ),
     Case("test -d && ||", "[ -d /project/src ] && echo dir || echo none"),
     Case("test -z", 'x=""; if [ -z "$x" ]; then echo empty; fi'),
