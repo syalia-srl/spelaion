@@ -72,16 +72,20 @@ class TestRealWorldScripts1:
     #   so version shows ".." and bump is "none".
     # ------------------------------------------------------------------
     def test_03_semver_bump_changelog(self) -> None:
+        # Today's dates before and after the run: one of them is the script's,
+        # even when the run crosses midnight.
+        before = datetime.date.today().isoformat()
         engine = ShellEngine()
         script = _load("03_semver_bump_changelog.sh")
         result = engine.run(script)
+        after = datetime.date.today().isoformat()
 
         assert result.result.exit_code == 0
         assert "Current version:" in result.stdout
         assert "Bump type:" in result.stdout
         assert "New version:" in result.stdout
         # Date from the engine's date builtin
-        assert datetime.date.today().isoformat() in result.stdout
+        assert before in result.stdout or after in result.stdout
         assert "Total commits:" in result.stdout
         assert "2.14.7" in result.stdout
 
