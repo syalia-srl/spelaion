@@ -22,12 +22,19 @@ around a sandbox.
 - A recipe for running Claude Code and OpenCode on spelaion, with a
   standalone Claude Code example and its test.
 - A battery of agent commands checked against real bash 5.
-- The security model, in `SECURITY.md`.
+- The book, at <https://syalia-srl.github.io/spelaion/> and as a PDF: a
+  Quick Start, a User Guide with one job per chapter and a Developer Guide.
+  Every block runs when it is built, and `make docs-check` gates it.
 
 ### Fixed
 
 - Parser: byte offsets in UTF-8 source, a trailing redirection, the rest of
-  a here-document line, and `!` over a whole pipeline.
+  a here-document line, `!` over a whole pipeline, and `$1-$2` (it printed
+  `a-$ 2`).
+- A prefix assignment (`FOO=bar cmd`) is in the command's environment, so
+  `env`, `python3` and host commands see it.
+- `head -c N` and `tail -c N` count bytes.
+- Two mounts at the same sandbox path are refused.
 - Redirections: `/dev/null`, a missing `<` file, each buffer written once,
   and stderr kept for every pipeline stage.
 - Globs match one path component at a time and keep leading folders as
