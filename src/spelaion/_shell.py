@@ -17,13 +17,15 @@ from spelaion.parser.frontend import parse_script
 from spelaion.parser.normalize import normalize
 from spelaion.policy.decisions import PolicyEngine
 from spelaion.policy.rules import PolicyConfig
-from spelaion.runtime.state import ShellState
+from spelaion.runtime.state import LoopLimit, ShellState
 from spelaion.tools.registry import ToolRegistry
 from spelaion.vfs.mounts import Mount, MountFs
 
 _CONTEXT_LINES = 3
 
 OUT_OF_MEMORY = "spelaion: out of memory\n"
+
+_MAX_LOOP_ITERATIONS = 1_000_000
 
 _log = logging.getLogger("spelaion")
 
@@ -86,11 +88,18 @@ class Shell:
                 state=state,
                 vfs=self.fs,
                 tools=self.tools,
-                policy=PolicyEngine(config=PolicyConfig()),
+                # The call's deadline bounds a loop; this cap only ends one
+                # that runs a million times inside it.
+                policy=PolicyEngine(
+                    config=PolicyConfig(max_loop_iterations=_MAX_LOOP_ITERATIONS)
+                ),
             )
             exit_code = executor.execute_node(program, io).exit_code
         except SystemExit as e:
             exit_code = e.code if isinstance(e.code, int) else 0
+        except LoopLimit:
+            # Its message is on stderr already.
+            exit_code = 1
         except MemoryError:
             # The memory cap hit: no traceback, and drop what output there is.
             return Result(stderr=OUT_OF_MEMORY, exit_code=1)
