@@ -84,6 +84,13 @@ class Sandbox:
         limits: Limits = _DEFAULT_LIMITS,
         python: bool = False,
     ) -> None:
+        # Each sandbox path normalised and each host folder resolved once, here:
+        # a restarted child must not resolve a relative host against a later cwd.
+        given = mounts
+        mounts = [
+            Mount(_normalize(m.path), Path(m.host).resolve(), m.readonly)
+            for m in given
+        ]
         _check_mounts(mounts)
         # The prepared folder, absolute, so a restarted child never reads
         # SPELAION_CACHE or a relative path again.
@@ -98,7 +105,7 @@ class Sandbox:
                     raise ValueError(
                         f"mount {m.path}: /lib and /site belong to python here"
                     )
-                host = Path(m.host).resolve()
+                host = Path(m.host)
                 # The cache holds native code the next process loads.
                 if not m.readonly and (
                     cache.is_relative_to(host) or host.is_relative_to(cache)
@@ -119,9 +126,13 @@ class Sandbox:
         self._fs = fs
         # Each mount's host folder, resolved and as given, longest first: an
         # exception's text names its sandbox path instead.
-        hosts = {str(Path(m.host).resolve()): m.path for m in mounts}
+        hosts = {str(m.host): m.path for m in mounts}
         hosts.update(
-            {str(Path(m.host)): m.path for m in mounts if os.path.isabs(m.host)}
+            {
+                str(Path(g.host)): m.path
+                for g, m in zip(given, mounts, strict=True)
+                if os.path.isabs(g.host)
+            }
         )
         self._host_roots = sorted(
             ((h, p) for h, p in hosts.items() if h != "/"), key=lambda hp: -len(hp[0])
@@ -330,7 +341,7 @@ class Sandbox:
             return None
         host = Path(os.path.normpath(filename))
         for m in self._mounts:
-            root = Path(m.host).resolve()
+            root = Path(m.host)
             if host.is_relative_to(root):
                 rel = host.relative_to(root).as_posix()
                 return m.path if rel == "." else m.path.rstrip("/") + "/" + rel
@@ -524,6 +535,11 @@ def _stop_child(process: subprocess.Popen[bytes], conn: Connection) -> None:
     conn.close()
     process.kill()
     process.wait()
+
+
+def _normalize(path: str) -> str:
+    """A sandbox path normalised lexically, as MountFs reads it."""
+    return "/" + posixpath.normpath("/" + path.lstrip("/")).lstrip("/")
 
 
 def _check_mounts(mounts: list[Mount]) -> None:

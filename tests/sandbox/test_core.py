@@ -160,6 +160,12 @@ def test_same_sandbox_path_twice_rejected(tmp_path: Path) -> None:
         Sandbox([Mount("/x", tmp_path / "a"), Mount("/x/", tmp_path / "b")])
 
 
+@pytest.mark.parametrize("path", ["//lib", "/lib/", "/site//pkgs"])
+def test_python_reservation_sees_normalised_path(tmp_path: Path, path: str) -> None:
+    with pytest.raises(ValueError, match="belong to python"):
+        Sandbox([Mount(path, tmp_path)], python=True)
+
+
 def test_sibling_folders_with_shared_prefix_allowed(tmp_path: Path) -> None:
     (tmp_path / "ab").mkdir()
     (tmp_path / "abc").mkdir()

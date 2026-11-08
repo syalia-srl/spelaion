@@ -375,3 +375,17 @@ def test_bad_message_restarts_the_child(sb: Sandbox, kind: str, what: str) -> No
     assert (r.stderr, r.exit_code) == (f"spelaion: child sent {what}; restarted\n", 125)
     assert sb._child_pid != pid  # pyright: ignore[reportPrivateUsage]
     assert sb.bash("echo next").stdout == "next\n"
+
+
+def test_relative_host_survives_chdir_and_restart(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "a" / "data").mkdir(parents=True)
+    (tmp_path / "a" / "data" / "f").write_text("original\n")
+    (tmp_path / "b" / "data").mkdir(parents=True)
+    (tmp_path / "b" / "data" / "f").write_text("elsewhere\n")
+    monkeypatch.chdir(tmp_path / "a")
+    with Sandbox([Mount("/d", "data")], cwd="/d") as s:
+        monkeypatch.chdir(tmp_path / "b")
+        assert s.bash("kill_self_for_test").exit_code == 125
+        assert s.bash("cat f").stdout == "original\n"
