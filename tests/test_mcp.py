@@ -6,9 +6,9 @@ import asyncio
 import base64
 import shutil
 import socket
-import threading
 import subprocess
 import sys
+import threading
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -22,6 +22,7 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared._httpx_utils import create_mcp_http_client
 
 from spelaion import HostContext, McpServer, Mount, Result, Sandbox
+from spelaion._mcp import _is_loopback
 
 PNG_FIXTURE = Path(__file__).parent / "sandbox" / "data" / "pixel.png"
 
@@ -276,6 +277,76 @@ def test_close_does_not_stop_the_server(rw: Path) -> None:
         assert asyncio.run(list_names(srv.url)) == ["bash", "edit", "write"]
     finally:
         srv.stop()
+
+
+def test_stop_cuts_off_a_running_call_quietly(
+    sb: Sandbox, capfd: pytest.CaptureFixture[str]
+) -> None:
+    started = threading.Event()
+    release = threading.Event()
+
+    @sb.command
+    def slow(ctx: HostContext, args: list[str]) -> Result:
+        started.set()
+        release.wait(timeout=30)
+        return Result(stdout="late\n")
+
+    srv = sb.serve_mcp()
+
+    async def run() -> BaseException | None:
+        async with client(srv.url) as c:
+            task = asyncio.create_task(c.call_tool("bash", {"command": "slow"}))
+            await asyncio.to_thread(started.wait, 30)
+            await asyncio.to_thread(srv.stop)
+            release.set()
+            try:
+                await asyncio.wait_for(task, 10)
+            except Exception as e:
+                return e
+            return None
+
+    try:
+        assert asyncio.run(run()) is not None
+    finally:
+        release.set()
+        srv.stop()
+    assert capfd.readouterr().err == ""
+    assert sb.bash("echo after").stdout == "after\n"
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "192.0.2.1", "example.com"])
+def test_beyond_loopback_needs_a_token(sb: Sandbox, host: str) -> None:
+    with pytest.raises(ValueError, match="needs a token"):
+        sb.serve_mcp(host=host)
+
+
+def test_localhost_needs_no_token(sb: Sandbox) -> None:
+    srv = sb.serve_mcp(host="localhost")
+    try:
+        assert asyncio.run(list_names(srv.url)) == ["bash", "edit", "write"]
+    finally:
+        srv.stop()
+
+
+@pytest.mark.parametrize(
+    ("host", "loopback"),
+    [
+        ("127.0.0.1", True),
+        ("127.8.9.10", True),
+        ("::1", True),
+        ("localhost", True),
+        ("0.0.0.0", False),
+        ("::", False),
+        ("10.0.0.1", False),
+        ("localhost.example", False),
+    ],
+)
+def test_is_loopback(host: str, loopback: bool) -> None:
+    assert _is_loopback(host) is loopback
+
+
+def test_any_host_with_a_token(sb: Sandbox) -> None:
+    sb.serve_mcp(host="0.0.0.0", token="s3cret").stop()
 
 
 # --- Token (ruling 16) ------------------------------------------------------
