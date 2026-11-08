@@ -222,6 +222,10 @@ class Scope:
         )
 
 
+class TimeoutExpired(Exception):
+    """``state.deadline`` has passed: unwind to the ``timeout`` that set it."""
+
+
 @dataclass
 class ShellState:
     """Runtime state for a single shell session.
@@ -239,6 +243,8 @@ class ShellState:
     positional_params: list[str] = field(default_factory=lambda: [])
     last_status: int = 0
     options: ShellOptions = field(default_factory=ShellOptions)
+    # time.monotonic() at which the innermost ``timeout`` stops its command.
+    deadline: float | None = None
 
     def __post_init__(self) -> None:
         """Initialize default shell variables."""

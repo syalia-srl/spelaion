@@ -203,6 +203,10 @@ CASES: list[Case] = [
     Case("! pipeline", "! false | true; echo $? ${PIPESTATUS[@]}"),
     Case("! command", "! grep -q zzz /project/plan.yaml && echo absent"),
     Case("sleep short", "sleep 0.1; echo slept"),
+    Case("timeout stops", "timeout 0.5 sleep 5; echo rc=$?"),
+    Case("timeout passes", "timeout 5 echo hi; echo rc=$?"),
+    Case("timeout ||", "timeout 0.5 sleep 5 || echo timed out"),
+    Case("timeout stdin", "echo in | timeout 5 cat"),
     # python with the bundled PyYAML.
     Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
     Case(

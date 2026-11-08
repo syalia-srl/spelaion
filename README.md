@@ -160,6 +160,8 @@ The interpreter parses with tree-sitter-bash into its own AST and evaluates it i
 - A here-document followed on its own line by `;` or `&` (`cat <<EOF; echo next`) is a syntax error; put the next command after the terminator. `>`, `|`, `&&` and `||` there work.
 - `/dev/null` works in redirections only; `cat /dev/null` or `diff f /dev/null` say it does not exist.
 - `cmd &` runs `cmd` in the foreground: there are no background processes or job control. `sleep` sleeps, within the call's deadline.
+- `timeout N cmd` stops `cmd` with status 124 at the next command it runs or inside `sleep`. One long command (a python guest, a grep over a big tree) runs on until the call's deadline.
+- `bash -c` and `sh -c` are not commands; a function does the same job.
 - Symlinks and hard links cannot be created (`ln` fails with a message). `grep -r` follows a symlink to a file inside its mount, where GNU grep skips it.
 - `ls -l` shows the same permissions for every file, and `which` prints `name: virtual command` rather than a path.
 - Pipes carry text (UTF-8); binary data travels through files.
@@ -168,7 +170,7 @@ The interpreter parses with tree-sitter-bash into its own AST and evaluates it i
 
 ## The in-memory `Bash` class
 
-`spelaion.Bash` runs the same shell in the calling process over an in-memory filesystem, with no mounts, no child process and no limits beyond the interpreter's own loop and recursion caps. It is for tests of the shell itself, not for agents:
+`spelaion.Bash` runs the same shell in the calling process over an in-memory filesystem, with no mounts, no child process and no limits beyond the interpreter's own loop and recursion caps. No deadline bounds `sleep` or a long command there, only `timeout` does. It is for tests of the shell itself, not for agents:
 
 ```python
 from spelaion import Bash

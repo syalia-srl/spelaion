@@ -207,6 +207,30 @@ class TestSleep:
         assert io.stderr.getvalue() == f"sleep: invalid time interval '{arg}'\n"
 
 
+class TestTimeout:
+    """timeout stops its command at the next command or inside sleep."""
+
+    def test_stops_a_function_keeping_its_output(self) -> None:
+        from spelaion import Bash
+
+        start = time.monotonic()
+        r = Bash().run("f() { echo a; sleep 5; echo b; }; timeout 0.2 f; echo rc=$?")
+        assert time.monotonic() - start < 2
+        assert r.stdout == "a\nrc=124\n"
+
+    def test_the_earlier_of_two_nested_timeouts_wins(self) -> None:
+        from spelaion import Bash
+
+        r = Bash().run("timeout 0.2 timeout 5 sleep 5; echo rc=$?")
+        assert r.stdout == "rc=124\n"
+
+    def test_bad_interval(self) -> None:
+        from spelaion import Bash
+
+        r = Bash().run("timeout x sleep 1")
+        assert (r.exit_code, r.stderr) == (125, "timeout: invalid time interval 'x'\n")
+
+
 # ---------------------------------------------------------------------------
 # env
 # ---------------------------------------------------------------------------

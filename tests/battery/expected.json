@@ -379,6 +379,22 @@
     "stdout": "slept\n",
     "exit_code": 0
   },
+  "timeout stops": {
+    "stdout": "rc=124\n",
+    "exit_code": 0
+  },
+  "timeout passes": {
+    "stdout": "hi\nrc=0\n",
+    "exit_code": 0
+  },
+  "timeout ||": {
+    "stdout": "timed out\n",
+    "exit_code": 0
+  },
+  "timeout stdin": {
+    "stdout": "in\n",
+    "exit_code": 0
+  },
   "python -c": {
     "stdout": "45\n",
     "exit_code": 0
