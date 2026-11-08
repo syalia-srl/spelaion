@@ -6,9 +6,9 @@ import asyncio
 import base64
 import shutil
 import socket
+import threading
 import subprocess
 import sys
-import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -21,7 +21,7 @@ from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared._httpx_utils import create_mcp_http_client
 
-from spelaion import McpServer, Mount, Sandbox
+from spelaion import HostContext, McpServer, Mount, Result, Sandbox
 
 PNG_FIXTURE = Path(__file__).parent / "sandbox" / "data" / "pixel.png"
 
@@ -128,18 +128,53 @@ def test_show_returns_an_image_block(server: McpServer, rw: Path) -> None:
     assert base64.b64decode(image.data) == PNG_FIXTURE.read_bytes()
 
 
-def test_two_calls_at_once(server: McpServer) -> None:
-    async def both() -> tuple[types.CallToolResult, types.CallToolResult]:
-        async with client(server.url) as c:
-            return await asyncio.gather(
-                c.call_tool("bash", {"command": "sleep 0.5; echo a"}),
-                c.call_tool("bash", {"command": "echo b"}),
-            )
+def test_two_calls_at_once(sb: Sandbox, server: McpServer) -> None:
+    started = threading.Event()
+    release = threading.Event()
+    events: list[str] = []
 
-    start = time.monotonic()
+    @sb.command
+    def slow(ctx: HostContext, args: list[str]) -> Result:
+        events.append("slow start")
+        started.set()
+        release.wait(timeout=30)
+        events.append("slow end")
+        return Result(stdout="a\n")
+
+    @sb.command
+    def stamp(ctx: HostContext, args: list[str]) -> Result:
+        events.append("b")
+        return Result(stdout="b\n")
+
+    async def first(c: Client) -> types.CallToolResult:
+        result = await c.call_tool("bash", {"command": "slow"})
+        events.append("a returned")
+        return result
+
+    async def second(c: Client) -> types.CallToolResult:
+        await asyncio.to_thread(started.wait, 30)
+        result = await c.call_tool("bash", {"command": "stamp"})
+        events.append("b returned")
+        return result
+
+    async def let_go() -> None:
+        await asyncio.to_thread(started.wait, 30)
+        # Time for the second call to reach the server; were it not held
+        # back, it would run and return in this window.
+        await asyncio.sleep(1)
+        events.append("released")
+        release.set()
+
+    async def both() -> list[types.CallToolResult]:
+        async with client(server.url) as c:
+            a, b, _ = await asyncio.gather(first(c), second(c), let_go())
+            return [a, b]
+
     a, b = asyncio.run(both())
     assert (text(a), text(b)) == ("a\n", "b\n")
-    assert time.monotonic() - start >= 0.5
+    assert not a.is_error and not b.is_error
+    assert events[:4] == ["slow start", "released", "slow end", "b"]
+    assert set(events[4:]) == {"a returned", "b returned"}
 
 
 def test_two_clients_at_once(server: McpServer) -> None:
