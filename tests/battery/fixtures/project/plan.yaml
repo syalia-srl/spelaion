@@ -1,0 +1,13 @@
+levels:
+  - id: pb
+    height: 2.7
+walls:
+  - id: w1
+    from: [0, 0]
+    to: [4.0, 0]
+  - id: w2
+    from: [4.0, 0]
+    to: [4.0, 3.0]
+items:
+  - id: silla-1
+    asset: chair

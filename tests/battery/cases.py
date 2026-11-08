@@ -1,0 +1,171 @@
+"""Commands coding agents write, with what real bash 5 prints for them.
+
+Each case runs with ``/project`` (read-only, ``fixtures/project``) and
+``/scratch`` (writable, empty) mounted and ``/scratch`` as the working
+directory. ``record.py`` runs every case under real bash on copies of the
+same files and writes ``expected.json``; ``test_battery.py`` runs it through
+a ``Sandbox`` and compares stdout and the exit code.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Case:
+    name: str
+    command: str
+    # Needs python in the sandbox (CPython for WASI).
+    python: bool = False
+    # Why spelaion does not match bash yet; the test is an xfail.
+    gap: str | None = None
+
+
+CASES: list[Case] = [
+    # The spike's twenty.
+    Case("cat | wc", "cat /project/plan.yaml | wc -l"),
+    Case("grep -n", "grep -n 'id: w' /project/plan.yaml"),
+    Case(
+        "sed -i",
+        "cp /project/plan.yaml plan.yaml && sed -i 's/4.0/4.5/g' plan.yaml"
+        " && grep -c 4.5 plan.yaml",
+    ),
+    Case("heredoc quoted", "cat > a.txt <<'EOF'\nhola $X\nEOF\ncat a.txt"),
+    Case("for | tail -1", "for i in 1 2 3; do echo silla-$i; done | tail -1"),
+    Case("$(...)", 'n=$(grep -c id /project/plan.yaml); echo "n=$n"'),
+    Case(
+        "awk | sort | head",
+        "awk '/id:/ {print $3}' /project/plan.yaml | sort | head -1",
+    ),
+    Case(
+        "find | xargs wc",
+        "find /project -name '*.yaml' | xargs wc -l | tail -1",
+        gap="wc pads its counts unlike GNU",
+    ),
+    Case("if [ -f ]", "if [ -f /project/plan.yaml ]; then echo yes; else echo no; fi"),
+    Case("false ||", "false || echo recovered"),
+    Case(
+        "diff -u",
+        "cp /project/plan.yaml b.yaml && sed -i s/pb/pa/ b.yaml"
+        " && diff -u /project/plan.yaml b.yaml | tail -n +3",
+    ),
+    Case("jq length", """echo '{"a":[1,2,3]}' | jq '.a | length'"""),
+    Case("printf format", "printf '%s-%03d\\n' silla 7"),
+    Case("arithmetic", "echo $(( 3 * 7 ))"),
+    Case("function", 'f() { echo "got $1"; }; f x'),
+    Case("2>&1 |", "cat /nope 2>&1 | head -1"),
+    Case("sort | uniq -c", "sort /project/words.txt | uniq -c"),
+    Case("cut | tr", "echo 'a:b:c' | cut -d: -f2 | tr a-z A-Z"),
+    Case("head -n -1", "printf '1\\n2\\n3\\n' | head -n -1 | tail -1"),
+    Case("ls | grep", "ls /project | grep plan", gap="ls prints columns into a pipe"),
+    # Obsolete short forms agents still write.
+    Case("tail -1", "printf '1\\n2\\n' | tail -1"),
+    Case("head -2", "printf '1\\n2\\n3\\n' | head -2"),
+    Case(
+        "wc several files",
+        "cd /project && wc -l plan.yaml README.md words.txt",
+        gap="wc pads its counts unlike GNU",
+    ),
+    # Search and inspect.
+    Case("grep -rn", "grep -rn TODO /project/src | sort"),
+    Case(
+        "grep -rl --include",
+        "grep -rl --include='*.py' greet /project | sort",
+        gap="grep has no --include",
+    ),
+    Case("grep -c no match", "grep -c nothing /project/plan.yaml; echo rc=$?"),
+    Case("find -type f | sort", "cd /project && find . -type f | sort"),
+    Case("find -name | wc", "find /project -name '*.py' | wc -l"),
+    Case(
+        "find -exec grep",
+        "find /project/src -name '*.py' -exec grep -l import {} + | sort",
+    ),
+    Case(
+        "sort | uniq -c | sort -rn",
+        "sort /project/words.txt | uniq -c | sort -rn | head -1",
+        gap="sort does not split combined flags",
+    ),
+    Case("head -n file", "head -n 3 /project/src/app.py"),
+    Case("sed -n range", "sed -n '2,4p' /project/plan.yaml"),
+    Case(
+        "awk sum",
+        "printf '3\\n4\\n5\\n' | awk '{s+=$1} END {print s}'",
+        gap="awk reads s+=$1 as a string",
+    ),
+    Case("awk -F", "awk -F': ' '/version/ {print NR}' /project/plan.yaml; echo end"),
+    Case("cat spaces", "cat '/project/notes with spaces.txt' | wc -l"),
+    Case("jq -r .[]", "jq -r '.deps[].name' /project/data.json"),
+    Case(
+        "jq select",
+        """jq -r '.deps[] | select(.name == "rich") | .pin' /project/data.json""",
+    ),
+    # Edit and build.
+    Case(
+        "heredoc expands",
+        "NAME=w; cat > b.txt <<EOF\nhello $NAME\n$(echo sub)\nEOF\ncat b.txt",
+    ),
+    Case(
+        "sed -i multiple",
+        "cp /project/src/util.py u.py && sed -i -e 's/greet/salute/g' -e '/TODO/d' u.py"
+        " && cat u.py",
+    ),
+    Case(
+        "mkdir -p && echo >",
+        "mkdir -p out/a/b && echo hi > out/a/b/c.txt && cat out/a/b/c.txt",
+    ),
+    Case("cp -r", "cp -r /project/src src2 && find src2 -type f | sort"),
+    Case(
+        "cp -r into itself",
+        "mkdir -p d && cp -r d d/e; echo rc=$?; ls d",
+        gap="cp -r recurses into its own output",
+    ),
+    Case(
+        "append >>",
+        "echo one > log && echo two >> log && cat log",
+        gap=">> writes once per enclosing redirection",
+    ),
+    Case("test -d && ||", "[ -d /project/src ] && echo dir || echo none"),
+    Case("test -z", 'x=""; if [ -z "$x" ]; then echo empty; fi'),
+    Case(
+        "for over glob",
+        "for f in /project/src/*.py; do basename $f; done",
+        gap="* in a glob matches /",
+    ),
+    Case("while read", "printf 'a b\\nc d\\n' | while read x y; do echo $y$x; done"),
+    Case("$? after fail", "grep -q zzz /project/plan.yaml; echo $?"),
+    Case("set -e", "set -e; false; echo unreachable"),
+    Case("null builtin", ": ; echo $?", gap=": is command not found"),
+    Case(
+        "true in while",
+        "i=0; while :; do i=$((i+1)); [ $i -ge 3 ] && break; done; echo $i",
+        gap=": is command not found",
+    ),
+    Case("case", "x=b.py; case $x in *.py) echo py;; *) echo other;; esac"),
+    Case(
+        "multi-file error",
+        "cat /project/plan.yaml /nope | wc -l; echo rc=${PIPESTATUS[0]}",
+        gap="no PIPESTATUS",
+    ),
+    Case(
+        "wc missing file",
+        "cd /project && wc -l plan.yaml nope words.txt; echo rc=$?",
+        gap="wc pads its counts unlike GNU",
+    ),
+    Case("sleep short", "sleep 0.1; echo slept"),
+    # python with the bundled PyYAML.
+    Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
+    Case(
+        "python yaml",
+        'python3 -c \'import yaml; d = yaml.safe_load(open("/project/plan.yaml"));'
+        ' print(len(d["walls"]))\'',
+        python=True,
+    ),
+    Case(
+        "python heredoc",
+        "python3 - <<'EOF'\nimport json\n"
+        "print(json.load(open('/project/data.json'))['version'])\nEOF",
+        python=True,
+    ),
+    Case("python | grep", "python3 -c 'print(\"a\\nb\\nc\")' | grep -c .", python=True),
+]
