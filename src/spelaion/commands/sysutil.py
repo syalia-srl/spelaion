@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from spelaion.commands._io import read_text
 from spelaion.commands._registry import command
 from spelaion.runtime.result import CommandResult
+from spelaion.runtime.state import TimeoutExpired
 
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
@@ -83,24 +84,35 @@ def cmd_seq(
 def cmd_sleep(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
-    # Sleeps for real: the call's deadline, which kills the child, bounds it.
-    units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    # Sleeps for real: the call's deadline, which kills the child, bounds it,
+    # and so does an enclosing ``timeout``.
     total = 0.0
     for a in args:
-        number, unit = (a[:-1], a[-1]) if a[-1:] in units else (a, "s")
-        try:
-            seconds = float(number) * units[unit]
-        except ValueError:
-            seconds = -1.0
-        if not seconds >= 0:
+        seconds = duration(a)
+        if seconds is None:
             io.stderr.write(f"sleep: invalid time interval '{a}'\n")
             return CommandResult(exit_code=1)
         total += seconds
     if not args:
         io.stderr.write("sleep: missing operand\n")
         return CommandResult(exit_code=1)
-    time.sleep(min(total, 365 * 86400))  # `sleep inf` overflows time.sleep
+    total = min(total, 365 * 86400)  # `sleep inf` overflows time.sleep
+    if state.deadline is not None and time.monotonic() + total >= state.deadline:
+        time.sleep(max(0.0, state.deadline - time.monotonic()))
+        raise TimeoutExpired
+    time.sleep(total)
     return CommandResult(exit_code=0)
+
+
+def duration(text: str) -> float | None:
+    """Seconds in a ``sleep``/``timeout`` interval (``1.5``, ``2m``, ``inf``)."""
+    units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    number, unit = (text[:-1], text[-1]) if text[-1:] in units else (text, "s")
+    try:
+        seconds = float(number) * units[unit]
+    except ValueError:
+        return None
+    return seconds if seconds >= 0 else None
 
 
 @command("env")

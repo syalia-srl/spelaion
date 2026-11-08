@@ -11,6 +11,7 @@ No subprocess.  All execution is virtual: builtins, tool dispatch, VFS I/O.
 from __future__ import annotations
 
 import fnmatch as _fnmatch
+import time
 from collections.abc import Callable
 from io import StringIO
 from typing import TYPE_CHECKING
@@ -55,6 +56,7 @@ from spelaion.exec.redirs import (
 )
 from spelaion.exec.tool_dispatch import dispatch_tool
 from spelaion.runtime.result import CommandResult
+from spelaion.runtime.state import TimeoutExpired
 from spelaion.semantics.resolve import resolve_command
 
 if TYPE_CHECKING:
@@ -101,6 +103,8 @@ class CommandEvaluator:
         """Execute an AST node and return the result."""
         if io is None:
             io = IOContext()
+        if self.state.deadline is not None and time.monotonic() >= self.state.deadline:
+            raise TimeoutExpired
 
         match node:
             case Program():

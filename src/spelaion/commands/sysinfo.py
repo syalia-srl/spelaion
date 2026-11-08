@@ -8,10 +8,13 @@ flock, sync, fsync, usleep.
 from __future__ import annotations
 
 import datetime
+import time
 from typing import TYPE_CHECKING
 
 from spelaion.commands._registry import command
+from spelaion.commands.sysutil import duration
 from spelaion.runtime.result import CommandResult
+from spelaion.runtime.state import TimeoutExpired
 
 if TYPE_CHECKING:
     from spelaion.exec.redirs import IOContext
@@ -242,23 +245,50 @@ def cmd_time(
 def cmd_timeout(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
-    # Skip optional -s SIGNAL and DURATION, then run COMMAND...
+    """Stop COMMAND after DURATION with status 124.
+
+    The shell checks the deadline before each command it runs and inside
+    ``sleep``; one long command (a python guest, a big grep) runs on until
+    the call's own deadline.
+    """
+    from spelaion.exec.redirs import IOContext as _IOCtx
+
     i = 0
-    while i < len(args):
-        if args[i] == "-s" and i + 1 < len(args):
-            i += 2  # skip -s and SIGNAL
-            continue
-        break
-
-    # Next arg is DURATION (skip it)
-    if i < len(args):
+    while i < len(args) and args[i].startswith("-") and args[i] != "-":
+        if args[i] in ("-s", "-k", "--signal", "--kill-after"):
+            i += 1  # the option's value
         i += 1
-
-    cmd_argv = args[i:]
+    limit = duration(args[i]) if i < len(args) else None
+    if limit is None:
+        io.stderr.write(
+            f"timeout: invalid time interval '{args[i]}'\n"
+            if i < len(args)
+            else "timeout: missing operand\n"
+        )
+        return CommandResult(exit_code=125)
+    cmd_argv = args[i + 1 :]
     if not cmd_argv:
-        io.stderr.write("timeout: missing command\n")
-        return CommandResult(exit_code=1)
-    return _run_sub(cmd_argv, io)
+        io.stderr.write("timeout: missing operand\n")
+        return CommandResult(exit_code=125)
+    if io.executor is None:
+        io.stderr.write("timeout: cannot execute sub-command without executor\n")
+        return CommandResult(exit_code=125)
+
+    outer = state.deadline
+    mine = time.monotonic() + min(limit, 365 * 86400)
+    state.deadline = mine if outer is None else min(outer, mine)
+    sub_io = _IOCtx(stdin=io.stdin, executor=io.executor)
+    try:
+        result = io.executor.execute_argv(cmd_argv, sub_io)
+    except TimeoutExpired:
+        if outer is not None and outer < mine:
+            raise  # an enclosing timeout's, which ends first
+        result = CommandResult(exit_code=124)
+    finally:
+        state.deadline = outer
+        io.stdout.write(sub_io.stdout.getvalue())
+        io.stderr.write(sub_io.stderr.getvalue())
+    return result
 
 
 # ---------------------------------------------------------------------------
