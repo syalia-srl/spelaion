@@ -433,11 +433,11 @@ if folder.is_dir():
 
 `cache_dir()` is `$SPELAION_CACHE`, else `$XDG_CACHE_HOME/spelaion`, else
 `~/.cache/spelaion`. `python-3.14.9/` holds `python.wasm` (the pinned release,
-checked by sha256), `python.wasm.cwasm-<wasmtime version>` (the compiled
-module), `lib/` (the standard library compiled to bytecode) and
+checked by sha256), `python.wasm.cwasm-<wasmtime version>-<cpu hash>` (the
+compiled module), `lib/` (the standard library compiled to bytecode) and
 `site-<12 hex>/` (PyYAML and `_boot`, compiled). The three names answer three
-different upgrades: the build names the folder, the wasmtime version names the
-compiled module, and a hash of `_boot` and the vendored PyYAML names the site
+different upgrades: the build names the folder, the wasmtime version and the
+CPU's features name the compiled module, and a hash of `_boot` and the vendored PyYAML names the site
 folder, so a new spelaion or wasmtime never runs a file an older one wrote. Only
 the parent builds the folder (`ensure_python`, called from the `Sandbox`
 constructor when `python=True`); a child that finds it missing prints a message
