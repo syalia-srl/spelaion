@@ -433,3 +433,12 @@ def test_internal_error_logged_not_returned(
     )
     assert "Traceback" not in r.stderr
     assert caplog.records and caplog.records[0].exc_info is not None
+
+
+def test_pipeline_keeps_every_stage_stderr(sb: Sandbox) -> None:
+    r = sb.bash("cat nope | cat; cat nope2 | cat nope3")
+    assert r.stderr == (
+        "cat: nope: No such file or directory\n"
+        "cat: nope2: No such file or directory\n"
+        "cat: nope3: No such file or directory\n"
+    )
