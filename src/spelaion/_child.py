@@ -14,6 +14,7 @@ import resource
 import signal
 import time
 from multiprocessing.connection import Connection
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from spelaion._shell import OUT_OF_MEMORY, Shell
@@ -61,10 +62,13 @@ def main(
     cwd: str,
     env: dict[str, str],
     limits: Limits,
-    python: bool,
+    python: Path | None,
     host_names: set[str],
 ) -> None:
-    """Serve ``call`` messages on *conn* until the parent closes it."""
+    """Serve ``call`` messages on *conn* until the parent closes it.
+
+    *python* is the prepared CPython for WASI folder, or None for no python.
+    """
     limit = limits.memory_mb * 2**20
     resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
     # No single file the child writes passes the disk cap; a write past it
@@ -77,7 +81,7 @@ def main(
     # catastrophic regex), where a Python handler would never run.
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
     shell = Shell(mounts, cwd, env, limits)
-    python_cmd = _Python(limits) if python else None
+    python_cmd = _Python(limits, python) if python is not None else None
     if python_cmd is not None:
         python_cmds.install(python_cmd)
     for name in host_names:
@@ -111,8 +115,9 @@ def main(
 class _Python:
     """``python`` and ``python3``: CPython for WASI over the shell's mounts."""
 
-    def __init__(self, limits: Limits) -> None:
+    def __init__(self, limits: Limits, folder: Path) -> None:
         self.limits = limits
+        self.folder = folder
         self.deadline = 0.0
 
     def __call__(
@@ -127,6 +132,7 @@ class _Python:
             cwd=state.cwd,
             env=dict(state.exported_env),
             fs=vfs,
+            folder=self.folder,
             deadline=self.deadline,
             memory_mb=self.limits.memory_mb,
             max_output=self.limits.max_output,

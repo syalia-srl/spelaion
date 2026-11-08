@@ -17,7 +17,7 @@ from pathlib import Path
 
 import wasmtime
 
-from spelaion.python.fetch import PYTHON_WASI, cache_dir, compiled_name, site_name
+from spelaion.python.fetch import compiled_name, site_name
 from spelaion.vfs.mounts import MountFs
 
 # Exit code for a call the epoch deadline stopped, as timeout(1) gives.
@@ -100,11 +100,14 @@ def run_python(
     cwd: str,
     env: dict[str, str],
     fs: MountFs,
+    folder: Path,
     deadline: float,
     memory_mb: int,
     max_output: int,
 ) -> tuple[str, str, int]:
     """Run ``python ARGS`` in *cwd* until *deadline* (``time.monotonic``).
+
+    *folder* is the prepared CPython for WASI (:func:`ensure_python`).
 
     Returns stdout, stderr and the exit code. The guest is stopped when it
     prints more than *max_output* characters could take, or leaves the
@@ -113,8 +116,7 @@ def run_python(
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         return "", "python: timed out\n", _TIMED_OUT
-    folder = prepared()
-    if folder is None:
+    if not prepared(folder):
         return "", _MISSING, 127
     module = load_module(folder)
     site = folder / site_name()
@@ -158,17 +160,14 @@ def run_python(
     return out, err, code
 
 
-def prepared() -> Path | None:
-    """The prepared folder, if the cache holds all of it; never builds.
+def prepared(folder: Path) -> bool:
+    """Whether *folder* holds all of the prepared python; never builds.
 
     Only the parent process builds it (:func:`ensure_python`): the child
     would build under its own memory limit and deadline.
     """
-    folder = cache_dir() / f"python-{PYTHON_WASI['version']}"
-    for part in (folder / "lib", folder / compiled_name(), folder / site_name()):
-        if not part.exists():
-            return None
-    return folder
+    parts = (folder / "lib", folder / compiled_name(), folder / site_name())
+    return all(part.exists() for part in parts)
 
 
 class _StdinTooLarge(Exception):
