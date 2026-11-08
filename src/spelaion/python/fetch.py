@@ -12,6 +12,7 @@ import contextlib
 import functools
 import hashlib
 import os
+import platform
 import shutil
 import tempfile
 import time
@@ -49,10 +50,31 @@ def cache_dir() -> Path:
 
 @functools.cache
 def compiled_name() -> str:
-    """The compiled module's file name, which names the wasmtime version."""
+    """The compiled module's file name, which names wasmtime's version and the CPU.
+
+    wasmtime compiles for the features of the CPU it runs on and refuses a
+    module compiled for others, so a cache that two machines share keeps a
+    compiled module for each.
+    """
     from importlib.metadata import version
 
-    return f"python.wasm.cwasm-{version('wasmtime')}"
+    try:
+        cpuinfo = Path("/proc/cpuinfo").read_text()
+    except OSError:
+        cpuinfo = ""
+    tag = cpu_tag(platform.machine(), cpuinfo)
+    return f"python.wasm.cwasm-{version('wasmtime')}-{tag}"
+
+
+def cpu_tag(machine: str, cpuinfo: str) -> str:
+    """A short hash of *machine* and the first feature list in *cpuinfo*."""
+    h = hashlib.sha256(machine.encode())
+    for line in cpuinfo.splitlines():
+        key, _, value = line.partition(":")
+        if key.strip() in ("flags", "Features"):
+            h.update(" ".join(sorted(value.split())).encode())
+            break
+    return h.hexdigest()[:12]
 
 
 def ensure_python() -> Path:

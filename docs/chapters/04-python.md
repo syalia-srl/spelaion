@@ -33,7 +33,7 @@ The cache holds one folder per CPython build:
 ```text
 python-3.14.9/
   python.wasm
-  python.wasm.cwasm-<wasmtime version>
+  python.wasm.cwasm-<wasmtime version>-<cpu hash>
   lib/
   site-<hash>/
 ```
@@ -42,7 +42,9 @@ python-3.14.9/
 PyYAML with the module that starts the guest. The compiled module's name
 carries the wasmtime version and the site folder's name a hash of its sources,
 so an upgrade writes new files instead of loading native code an older spelaion
-left behind. Only the parent process builds the cache; a child that finds it
+left behind. wasmtime compiles for the features of the CPU it runs on, so the
+compiled module's name also carries a hash of them, and a cache that two
+machines share keeps one compiled module for each. Only the parent process builds the cache; a child that finds it
 incomplete prints a message and exits 127. The sandbox refuses a writable mount
 that holds the cache or lies inside it, because the cache holds native code the
 host loads.

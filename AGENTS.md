@@ -65,8 +65,10 @@ own path; WASI gives it no sockets and no processes. Mounts at `/lib` or
 `/site` are refused when `python=True`.
 
 - The cache folder is keyed on the build (`python-3.14.9/`), the compiled
-  module on the wasmtime version (`python.wasm.cwasm-X.Y.Z`) and `site-HASH/`
-  on its sources, so upgrading spelaion never runs files an older one left.
+  module on the wasmtime version and a hash of the CPU's features
+  (`python.wasm.cwasm-X.Y.Z-HASH`) and `site-HASH/` on its sources, so
+  upgrading spelaion never runs files an older one left, and a cache shared by
+  machines with different CPUs keeps a compiled module for each.
 - Memory: the guest's linear memory counts against the child's `RLIMIT_DATA`
   (`memory_mb`), and no extra allowance is needed. Measured with wasmtime
   50.0.1: the child holds about 50 MB of data with the engine and module
