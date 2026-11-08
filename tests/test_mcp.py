@@ -6,6 +6,8 @@ import asyncio
 import base64
 import shutil
 import socket
+import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -281,3 +283,24 @@ def test_client_with_wrong_token_fails(guarded: McpServer) -> None:
 
 def test_no_token_means_no_auth(server: McpServer) -> None:
     assert status(server.url, {}) != 401
+
+
+# --- Import cost ------------------------------------------------------------
+
+
+def test_the_child_does_not_import_mcp() -> None:
+    probe = (
+        "import sys, spelaion._child; "
+        "print(sorted({'mcp', 'uvicorn', 'starlette'} & set(sys.modules)))"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=True
+    )
+    assert out.stdout == "[]\n"
+
+
+def test_mcp_server_is_still_importable() -> None:
+    from spelaion import McpServer as Imported
+    from spelaion._mcp import McpServer as Real
+
+    assert Imported is Real
