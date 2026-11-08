@@ -38,7 +38,12 @@ from spelaion.ast.nodes import (
     WhileLoop,
 )
 from spelaion.commands._registry import COMMANDS
-from spelaion.exec.builtins import BUILTINS, BreakSignal, ContinueSignal
+from spelaion.exec.builtins import (
+    BUILTINS,
+    BreakSignal,
+    ContinueSignal,
+    ReturnSignal,
+)
 from spelaion.exec.compound import (
     execute_and_or,
     execute_function_call,
@@ -94,18 +99,31 @@ class CommandEvaluator:
         self.arith_ev = arith_ev
         self.bool_ev = bool_ev
         self._recursion_depth = 0
+        # The stderr of the node running now: a ``$(...)`` inside it writes
+        # its errors there.
+        self._stderr = StringIO()
+        # The status of the last ``$(...)`` a simple command ran, for ``$?``
+        # after a command of assignments only; None when it ran none.
+        self._cmdsub_status: int | None = None
 
     # ------------------------------------------------------------------
     # Main dispatch
     # ------------------------------------------------------------------
 
-    def execute_node(self, node: ASTNode, io: IOContext | None = None) -> CommandResult:  # noqa: C901
+    def execute_node(self, node: ASTNode, io: IOContext | None = None) -> CommandResult:
         """Execute an AST node and return the result."""
         if io is None:
             io = IOContext()
         if self.state.deadline is not None and time.monotonic() >= self.state.deadline:
             raise TimeoutExpired
+        outer_stderr = self._stderr
+        self._stderr = io.stderr
+        try:
+            return self._dispatch(node, io)
+        finally:
+            self._stderr = outer_stderr
 
+    def _dispatch(self, node: ASTNode, io: IOContext) -> CommandResult:  # noqa: C901
         match node:
             case Program():
                 return self._execute_program(node, io)
@@ -207,6 +225,7 @@ class CommandEvaluator:
         self, node: SimpleCommand, io: IOContext
     ) -> CommandResult:
         # Handle prefix assignments
+        self._cmdsub_status = None
         saved_vars: dict[str, str | None] = {}
         for assign in node.assignments:
             if isinstance(assign, ArrayAssignmentWord):
@@ -223,10 +242,12 @@ class CommandEvaluator:
             saved_vars[assign.name] = self.state.get_var(assign.name)
             self.state.set_var(assign.name, value)
 
-        # If no words, assignments are permanent
+        # If no words, assignments are permanent; their status is the last
+        # command substitution's.
         if not node.words:
-            self.state.last_status = 0
-            return CommandResult(exit_code=0)
+            status = self._cmdsub_status or 0
+            self.state.last_status = status
+            return CommandResult(exit_code=status)
 
         # Expand words
         expanded: list[str] = []
@@ -577,11 +598,22 @@ class CommandEvaluator:
                 return ""
 
             program, _ = normalize(parse_result.root_node, command)
-            io = IOContext()
-            self.execute_node(program, io)
+            io = IOContext(stderr=self._stderr)
+            try:
+                status = self.execute_node(program, io).exit_code
+            except (MemoryError, TimeoutExpired):
+                # The call's own limits: they end the call, not this command.
+                raise
+            except ReturnSignal as sig:
+                status = sig.exit_code
+            except (BreakSignal, ContinueSignal):
+                status = 0
+            except Exception as e:
+                # Never the message: it may name a host path.
+                io.stderr.write(f"spelaion: internal error: {type(e).__name__}\n")
+                status = 1
+            self._cmdsub_status = status
             return io.stdout.getvalue()
-        except Exception:
-            return ""
         finally:
             self._recursion_depth -= 1
 

@@ -207,6 +207,12 @@ CASES: list[Case] = [
     Case("timeout passes", "timeout 5 echo hi; echo rc=$?"),
     Case("timeout ||", "timeout 0.5 sleep 5 || echo timed out"),
     Case("timeout stdin", "echo in | timeout 5 cat"),
+    # Command substitution: its status and its errors.
+    Case("$? after x=$(false)", "x=$(false); echo $?"),
+    Case("$? after x=$(true)", "false; x=$(true); echo $?"),
+    Case("$? after x=$(timeout)", "x=$(timeout 0.1 sleep 1); echo $?"),
+    Case("$(...) stderr shows", "{ x=$(cat /nope); } 2>&1 | wc -l"),
+    Case("$(...) 2>&1 inside", 'x=$(cat /nope 2>&1); [ -n "$x" ] && echo captured'),
     # python with the bundled PyYAML.
     Case("python -c", "python3 -c 'print(sum(range(10)))'", python=True),
     Case(
