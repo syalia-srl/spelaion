@@ -1070,3 +1070,50 @@ class TestRealpath:
         result = cmd_realpath(["."], state, vfs, io_ctx)
         assert result.exit_code == 0
         assert io_ctx.stdout.getvalue() == "/home/user\n"
+
+
+# ------------------------------------------------------------------
+# head -c and tail -c
+# ------------------------------------------------------------------
+
+
+class TestByteCounts:
+    def test_head_c(
+        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    ) -> None:
+        result = cmd_head(["-c", "5", "hello.txt"], state, vfs, io_ctx)
+        assert result.exit_code == 0
+        assert io_ctx.stdout.getvalue() == "hello"
+
+    def test_head_c_attached(
+        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    ) -> None:
+        cmd_head(["-c3", "hello.txt"], state, vfs, io_ctx)
+        assert io_ctx.stdout.getvalue() == "hel"
+
+    def test_tail_c(
+        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    ) -> None:
+        result = cmd_tail(["-c", "6", "hello.txt"], state, vfs, io_ctx)
+        assert result.exit_code == 0
+        assert io_ctx.stdout.getvalue() == "world\n"
+
+    def test_head_c_counts_bytes(
+        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    ) -> None:
+        vfs.write("/accents.txt", "añb\n".encode())
+        cmd_head(["-c", "3", "accents.txt"], state, vfs, io_ctx)
+        assert io_ctx.stdout.getvalue() == "añ"
+
+    def test_head_c_invalid(
+        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    ) -> None:
+        result = cmd_head(["-c", "x", "hello.txt"], state, vfs, io_ctx)
+        assert result.exit_code == 1
+        assert "invalid number of bytes" in io_ctx.stderr.getvalue()
+
+    def test_tail_c_more_than_the_file(
+        self, vfs: VirtualFilesystem, state: ShellState, io_ctx: IOContext
+    ) -> None:
+        cmd_tail(["-c", "100", "hello.txt"], state, vfs, io_ctx)
+        assert io_ctx.stdout.getvalue() == "hello world\n"
