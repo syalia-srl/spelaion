@@ -47,7 +47,12 @@ from spelaion.exec.compound import (
     execute_subshell,
 )
 from spelaion.exec.pipelines import execute_pipeline
-from spelaion.exec.redirs import IOContext, VFSWriteBuffer, apply_redirections
+from spelaion.exec.redirs import (
+    IOContext,
+    RedirectionError,
+    VFSWriteBuffer,
+    apply_redirections,
+)
 from spelaion.exec.tool_dispatch import dispatch_tool
 from spelaion.runtime.result import CommandResult
 from spelaion.semantics.resolve import resolve_command
@@ -234,9 +239,22 @@ class CommandEvaluator:
         # Apply redirections — save originals so we can restore after
         saved_stdout = io.stdout
         saved_stderr = io.stderr
-        io = apply_redirections(
-            node.redirections, io, self.state, self.vfs, self.cmdsub_hook
-        )
+        try:
+            io = apply_redirections(
+                node.redirections, io, self.state, self.vfs, self.cmdsub_hook
+            )
+        except RedirectionError:
+            self._finalize_io(
+                io,
+                saved_stdout,
+                saved_stderr,
+                io.stdout is not saved_stdout,
+                io.stderr is not saved_stderr,
+            )
+            self._restore_vars_if_temporary(node, saved_vars)
+            self.state.last_status = 1
+            self.state.set_array("PIPESTATUS", ["1"])
+            return CommandResult(exit_code=1)
         stdout_redirected = io.stdout is not saved_stdout
         stderr_redirected = io.stderr is not saved_stderr
 
@@ -512,10 +530,13 @@ class CommandEvaluator:
         saved_stdin = io.stdin
         saved_stdout = io.stdout
         saved_stderr = io.stderr
-        io = apply_redirections(
-            node.redirections, io, self.state, self.vfs, self.cmdsub_hook
-        )
-        result = self.execute_node(node.body, io)
+        try:
+            io = apply_redirections(
+                node.redirections, io, self.state, self.vfs, self.cmdsub_hook
+            )
+            result = self.execute_node(node.body, io)
+        except RedirectionError:
+            result = CommandResult(exit_code=1)
         if not self._flush_redirects(
             [
                 b

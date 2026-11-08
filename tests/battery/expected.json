@@ -279,6 +279,14 @@
     "stdout": "0\n",
     "exit_code": 0
   },
+  "< missing file": {
+    "stdout": "rc=1\n",
+    "exit_code": 0
+  },
+  "< missing file &&": {
+    "stdout": "skipped\n",
+    "exit_code": 0
+  },
   "append >>": {
     "stdout": "one\ntwo\n",
     "exit_code": 0

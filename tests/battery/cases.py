@@ -160,6 +160,8 @@ CASES: list[Case] = [
     Case("2>/dev/null", "cat /nope 2>/dev/null; echo rc=$?"),
     Case(">/dev/null 2>&1", "ls /project >/dev/null 2>&1 && echo quiet"),
     Case("< /dev/null", "wc -l < /dev/null"),
+    Case("< missing file", "cat < /nope; echo rc=$?"),
+    Case("< missing file &&", "wc -l < /nope && echo ran || echo skipped"),
     Case(
         "append >>",
         "echo one > log && echo two >> log && cat log",
