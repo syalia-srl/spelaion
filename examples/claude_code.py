@@ -11,8 +11,10 @@ prints the tools Claude Code reports at start and the model's answer.
 
 The config folder is yours to choose and log into; this script never creates
 it and never copies a login into it. Claude Code gets this process's
-environment without ``CLAUDECODE`` and the ``CLAUDE_CODE_*`` variables, so a
-run from inside another Claude Code session behaves as one from a shell.
+environment without the variables that mark a run inside another Claude Code
+session (``CLAUDECODE``, ``CLAUDE_CODE_ENTRYPOINT``, ``CLAUDE_CODE_SSE_PORT``),
+so it behaves as one from a shell; provider and login variables such as
+``CLAUDE_CODE_USE_BEDROCK`` or ``CLAUDE_CODE_OAUTH_TOKEN`` pass through.
 """
 
 from __future__ import annotations
@@ -97,12 +99,12 @@ def run(prompt: str, config_dir: Path, claude: str = "claude") -> Run:
     return Run(tools=list(init["tools"]), answer=str(result.get("result", "")))
 
 
+# What marks a run inside another Claude Code session; nothing else is dropped.
+_SESSION_VARS = ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT")
+
+
 def _env(config_dir: Path) -> dict[str, str]:
-    env = {
-        k: v
-        for k, v in os.environ.items()
-        if k != "CLAUDECODE" and not k.startswith("CLAUDE_CODE_")
-    }
+    env = {k: v for k, v in os.environ.items() if k not in _SESSION_VARS}
     return {**env, "CLAUDE_CONFIG_DIR": str(config_dir)}
 
 
