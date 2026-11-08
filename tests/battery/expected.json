@@ -395,6 +395,26 @@
     "stdout": "in\n",
     "exit_code": 0
   },
+  "$? after x=$(false)": {
+    "stdout": "1\n",
+    "exit_code": 0
+  },
+  "$? after x=$(true)": {
+    "stdout": "0\n",
+    "exit_code": 0
+  },
+  "$? after x=$(timeout)": {
+    "stdout": "124\n",
+    "exit_code": 0
+  },
+  "$(...) stderr shows": {
+    "stdout": "1\n",
+    "exit_code": 0
+  },
+  "$(...) 2>&1 inside": {
+    "stdout": "captured\n",
+    "exit_code": 0
+  },
   "python -c": {
     "stdout": "45\n",
     "exit_code": 0
