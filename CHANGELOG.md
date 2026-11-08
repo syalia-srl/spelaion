@@ -19,8 +19,8 @@ around a sandbox.
 - `tools()` for in-process agent loops, and an MCP server that offers the
   same three tools.
 - Builtins `:` and `command`, `PIPESTATUS`, and `timeout` (status 124).
-- A recipe for running Claude Code and OpenCode on spelaion (`docs/harnesses.md`),
-  with a standalone Claude Code example and its test.
+- A recipe for running Claude Code and OpenCode on spelaion, with a
+  standalone Claude Code example and its test.
 - A battery of agent commands checked against real bash 5.
 - The security model, in `SECURITY.md`.
 

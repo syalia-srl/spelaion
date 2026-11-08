@@ -136,7 +136,7 @@ server.stop()
 
 `serve_mcp` serves the three tools over MCP's streamable HTTP from a background thread of the product's own process, where the host commands live. With a `token`, every request must carry `Authorization: Bearer <token>`; listening beyond loopback without one raises `ValueError`. [`examples/serve.py`](examples/serve.py) runs one until Ctrl-C.
 
-A harness such as Claude Code or OpenCode must run with its own tools off, with these three tools and no others, with a configuration folder of its own and in an empty working folder. [docs/harnesses.md](docs/harnesses.md) gives the recipe and [`examples/claude_code.py`](examples/claude_code.py) runs Claude Code with it.
+A harness such as Claude Code or OpenCode must run with its own tools off, with these three tools and no others, with a configuration folder of its own and in an empty working folder. [Running Claude Code or OpenCode](docs/chapters/09-harnesses.md) gives the recipe and [`examples/claude_code.py`](examples/claude_code.py) runs Claude Code with it.
 
 ## Security model
 
