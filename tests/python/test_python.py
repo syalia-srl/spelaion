@@ -289,6 +289,7 @@ def _run(tmp_path: Path, code: str, deadline: float) -> tuple[str, str, int]:
         cwd="/scratch",
         env={},
         fs=MountFs([Mount("/scratch", tmp_path)]),
+        folder=fetch.ensure_python(),
         deadline=deadline,
         memory_mb=256,
         max_output=30_000,
@@ -452,6 +453,22 @@ def test_child_never_builds(
         "run spelaion fetch-python\n"
     )
     assert list(cache.iterdir()) == []
+
+
+def test_restarted_child_keeps_the_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, linked_cache: Path
+) -> None:
+    # A relative SPELAION_CACHE, then another cwd and environment: the
+    # restarted child still uses the folder found at construction.
+    monkeypatch.chdir(linked_cache.parent)
+    monkeypatch.setenv("SPELAION_CACHE", linked_cache.name)
+    (tmp_path / "w").mkdir()
+    with Sandbox([Mount("/w", tmp_path / "w")], cwd="/w", python=True) as s:
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("SPELAION_CACHE", str(tmp_path / "elsewhere"))
+        s._restart()  # pyright: ignore[reportPrivateUsage]
+        assert s.bash("python -c 'print(1)'").stdout == "1\n"
+    assert not (tmp_path / "elsewhere").exists()
 
 
 def test_stale_work_folders_removed(

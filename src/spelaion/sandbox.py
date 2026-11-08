@@ -52,6 +52,9 @@ class Sandbox:
         python: bool = False,
     ) -> None:
         _check_mounts(mounts)
+        # The prepared folder, absolute, so a restarted child never reads
+        # SPELAION_CACHE or a relative path again.
+        self._python_folder: Path | None = None
         if python:
             from spelaion.python.fetch import cache_dir, ensure_python
             from spelaion.python.runner import reserved
@@ -71,7 +74,7 @@ class Sandbox:
                         f"mount {m.path}: a writable mount must not hold or lie "
                         f"inside the python cache {cache}"
                     )
-            ensure_python()
+            self._python_folder = ensure_python().resolve()
         fs = MountFs(list(mounts), max_disk=limits.max_disk)
         if not cwd.startswith("/") or not fs.is_dir(cwd):
             raise ValueError(f"cwd {cwd} is not an absolute path to a folder")
@@ -236,7 +239,7 @@ class Sandbox:
             self._cwd,
             self._env,
             self.limits,
-            self.python,
+            self._python_folder,
             set(self._host_names),
         )
         conn.send((sys.path, pickle.dumps(args)))
