@@ -590,6 +590,16 @@ def _normalize_pipeline(
             continue
         try:
             ast_node = _normalize_node(child, source, diagnostics)
+            # tree-sitter-bash reads ``! a | b`` as ``(! a) | b``; in bash
+            # the ``!`` negates the whole pipeline.
+            if (
+                child.type == "negated_command"
+                and not commands
+                and isinstance(ast_node, Pipeline)
+                and len(ast_node.commands) == 1
+            ):
+                negated = True
+                ast_node = ast_node.commands[0]
             if ast_node is not None:
                 commands.append(ast_node)
         except UnsupportedSyntaxError as e:

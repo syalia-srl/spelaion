@@ -367,6 +367,14 @@
     "stdout": "0 1 0\n",
     "exit_code": 0
   },
+  "! pipeline": {
+    "stdout": "1 1 0\n",
+    "exit_code": 0
+  },
+  "! command": {
+    "stdout": "absent\n",
+    "exit_code": 0
+  },
   "sleep short": {
     "stdout": "slept\n",
     "exit_code": 0
