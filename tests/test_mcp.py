@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 import shutil
 import socket
 import subprocess
@@ -410,3 +411,45 @@ def test_mcp_server_is_still_importable() -> None:
     from spelaion._mcp import McpServer as Real
 
     assert Imported is Real
+
+
+def test_mcp_server_is_in_dir() -> None:
+    import spelaion
+
+    assert "McpServer" in dir(spelaion)
+    assert "Sandbox" in dir(spelaion)
+    assert "__version__" in dir(spelaion)
+
+
+def test_serving_leaves_the_products_uvicorn_logging_alone(sb: Sandbox) -> None:
+    logger = logging.getLogger("uvicorn.error")
+    handler = logging.NullHandler()
+    before = logger.level
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    try:
+        sb.serve_mcp().stop()
+        assert handler in logger.handlers
+        assert logger.level == logging.DEBUG
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(before)
+
+
+def test_server_threads_are_named_apart(sb: Sandbox) -> None:
+    def names() -> set[str]:
+        return {t.name for t in threading.enumerate()}
+
+    first = sb.serve_mcp()
+    second = sb.serve_mcp()
+    try:
+        port1 = first.url.rsplit(":", 1)[1].split("/")[0]
+        port2 = second.url.rsplit(":", 1)[1].split("/")[0]
+        ours = {n for n in names() if n.startswith("spelaion-mcp-")}
+        assert len(ours) == 2
+        (a,) = [n for n in ours if n.startswith(f"spelaion-mcp-{port1}-")]
+        (b,) = [n for n in ours if n.startswith(f"spelaion-mcp-{port2}-")]
+        assert a.rsplit("-", 1)[1] != b.rsplit("-", 1)[1]
+    finally:
+        first.stop()
+        second.stop()

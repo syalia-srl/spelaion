@@ -30,6 +30,10 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def __dir__() -> list[str]:
+    return sorted(set(__all__) | set(globals()))
+
+
 __all__ = [
     "Attachment",
     "Bash",
