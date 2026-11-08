@@ -35,7 +35,8 @@ rules:
     severity: warning
     extract:
       file: "src/spelaion/_mcp.py"
-      regex: '^    def ([a-z]\w*)\((?:self\b|$)'
+      # The logging filters' filter() is not McpServer's.
+      regex: '^    def ((?!filter\b)[a-z]\w*)\((?:self\b|$)'
     require:
       in: "docs/chapters/*.md"
       as: word
