@@ -1,7 +1,8 @@
 # ADR-0007: Single Stateful ShellEngine Shared Across LangChain Tools
 
 ## Status
-Accepted
+Superseded: the LangChain tools were removed in spelaion, whose three
+tools (`bash`, `edit`, `write`) start a fresh shell state on every call.
 
 ## Context
 spelaion provides three LangChain tools: `parse`, `plan`, and `run`. When an LLM agent uses these tools in a conversation, it typically builds up state incrementally -- setting variables, creating files, defining functions -- across multiple tool calls.

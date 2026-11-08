@@ -9,8 +9,9 @@ The host extends it with commands written in Python. It began as a copy of
 an MIT-licensed shell by Mayflower GmbH; their license is kept in `LICENSES/`.
 
 The shell is pure Python: a tree-sitter-bash parser, a project-owned AST, an
-evaluator with three-tier resolution (function, builtin, virtual command) and
-about 160 commands, over a virtual filesystem.
+evaluator with three-tier resolution (function, builtin, virtual command),
+128 commands and 39 builtins, over the mounted folders (`MountFs`); the
+in-memory filesystem remains for the `Bash` test class.
 
 ## Constraints
 
@@ -75,6 +76,10 @@ own path; WASI gives it no sockets and no processes. Mounts at `/lib` or
   files and `disk_used()` and stops it through the epoch past
   `4 * max_output` bytes or the disk cap. The child's `RLIMIT_FSIZE` is
   `max_disk`, so no single file passes the cap (EFBIG).
+- Symlinks: WASI lets the guest create a symlink in a writable mount, and
+  one with `../` can point out of it. It stays on the host: the resolver
+  refuses it inside the sandbox, but another program on the host could
+  follow it. Treat writable mounts as untrusted input on the host side.
 - Only the parent builds the cache (`ensure_python`); a child that finds it
   missing prints a message and exits 127. A writable mount may not hold or
   lie inside the cache, which holds native code.
