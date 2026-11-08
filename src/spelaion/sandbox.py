@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import pickle
@@ -160,7 +161,8 @@ class Sandbox:
         what it prints goes to this process's own stdout and stderr, not the
         agent's. An exception it raises becomes ``name: message`` on stderr
         with exit code 1. ``SystemExit`` (argparse's, say) ends the command
-        with its code, or with its message and exit code 1. A
+        with its code, or with its message and exit code 1. Exit codes wrap
+        to 0-255, as in bash. A
         ``KeyboardInterrupt`` ends the command and is raised from the call.
 
         ``ctx.remaining_s`` is the time left before the call's deadline,
@@ -245,7 +247,7 @@ class Sandbox:
             result = cast(object, handler(ctx, args))
         except SystemExit as e:
             if e.code is None or isinstance(e.code, int):
-                return Result(exit_code=int(e.code or 0))
+                return Result(exit_code=int(e.code or 0) & 255)
             text = self._hide_hosts(str(e.code))
             return Result(stderr=f"{name}: {text}\n", exit_code=1)
         except Exception as e:
@@ -259,8 +261,9 @@ class Sandbox:
             stderr = f"{result.stderr}{name}: {e}\n"
             return Result(stdout=result.stdout, stderr=stderr, exit_code=1)
         # The child needs only the text; images stay here for the call's Result.
+        # Exit codes wrap to 0-255, as in bash.
         return Result(
-            stdout=result.stdout, stderr=result.stderr, exit_code=result.exit_code
+            stdout=result.stdout, stderr=result.stderr, exit_code=result.exit_code & 255
         )
 
     def _describe(self, e: Exception, ctx: HostContext) -> str:
@@ -354,7 +357,9 @@ class Sandbox:
                     # Answer so the child is not left waiting; _call then
                     # restarts it, since its done would answer the next call.
                     stopped = Result(stderr=f"{msg[1]}: interrupted\n", exit_code=130)
-                    self._conn.send(("host_result", stopped))
+                    # A dead child must not turn the interrupt into a retry.
+                    with contextlib.suppress(OSError):
+                        self._conn.send(("host_result", stopped))
                     raise
                 self._conn.send(reply)
         except BadMessage as e:

@@ -442,3 +442,21 @@ def test_pipeline_keeps_every_stage_stderr(sb: Sandbox) -> None:
         "cat: nope2: No such file or directory\n"
         "cat: nope3: No such file or directory\n"
     )
+
+
+def test_four_byte_output_at_the_limit(rw: Path) -> None:
+    with Sandbox([Mount("/scratch", rw)], limits=Limits(max_output=10_000)) as s:
+        r = s.bash("for i in $(seq 9000); do printf '😀'; printf '😀' >&2; done")
+    assert r.exit_code == 0, r.stderr[-200:]
+    assert r.stdout == "😀" * 9000 and r.stderr == "😀" * 9000
+
+
+def test_four_byte_output_past_the_old_bound(rw: Path) -> None:
+    # 2 * 290_000 * 4 bytes exceeds 4 * max_output + 1_000_000.
+    with Sandbox([Mount("/scratch", rw)], limits=Limits(max_output=300_000)) as s:
+        r = s.bash(
+            "seq 290000 | sed 's/.*/😀/' | tr -d '\\n'; "
+            "seq 290000 | sed 's/.*/😀/' | tr -d '\\n' >&2"
+        )
+    assert r.exit_code == 0, r.stderr[-200:]
+    assert r.stdout == "😀" * 290_000 and r.stderr == "😀" * 290_000
