@@ -589,5 +589,12 @@ def _as_written(pattern: str, match: str, cwd: str) -> str:
     """*match*, absolute, in the form *pattern* had: bash keeps ``*.py`` relative."""
     if pattern.startswith("/"):
         return match
-    rel = posixpath.relpath(match, cwd)
-    return "./" + rel if pattern.startswith("./") else rel
+    # Keep the literal leading folders (``../``, ``src/../``, ``./``) as typed
+    # and make the match relative to the folder they name.
+    parts = pattern.split("/")
+    n = 0
+    while n < len(parts) - 1 and not any(c in parts[n] for c in "*?["):
+        n += 1
+    prefix = "/".join(parts[:n]) + "/" if n else ""
+    base = posixpath.normpath(posixpath.join(cwd, prefix))
+    return prefix + posixpath.relpath(match, base)

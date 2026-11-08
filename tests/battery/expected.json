@@ -271,6 +271,18 @@
     "stdout": "v\n.h\n",
     "exit_code": 0
   },
+  "glob ../*": {
+    "stdout": "../e ../sub\n../e:\nx\n\n../sub:\n",
+    "exit_code": 0
+  },
+  "glob ./*": {
+    "stdout": "./a ./b\n",
+    "exit_code": 0
+  },
+  "glob src/../*": {
+    "stdout": "src/../README.md src/../src\n",
+    "exit_code": 0
+  },
   "while read": {
     "stdout": "ba\ndc\n",
     "exit_code": 0
