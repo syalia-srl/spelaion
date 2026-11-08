@@ -12,6 +12,7 @@ import errno
 import fnmatch
 import os
 import posixpath
+import re
 import shutil
 import stat
 from collections.abc import Iterator
@@ -44,6 +45,10 @@ class _Mounted:
     path: str
     host: Path
     readonly: bool
+
+
+# The paths ``<(...)`` expands to.
+_PIPE = re.compile(r"/dev/fd/procsub_[0-9]+")
 
 
 def _error(code: int, path: str) -> OSError:
@@ -92,6 +97,8 @@ class MountFs:
             reverse=True,
         )
         self._max_disk = max_disk
+        # What each ``<(...)`` printed, by its /dev/fd path, for one call.
+        self._pipes: dict[str, bytes] = {}
 
     @property
     def mounts(self) -> list[Mount]:
@@ -146,6 +153,14 @@ class MountFs:
                 raise _error(errno.EDQUOT, path)
         return host
 
+    def _is_pipe(self, path: str) -> bool:
+        # A mount at /dev or above it would hold the path instead.
+        return _PIPE.fullmatch(path) is not None and self._find(path) is None
+
+    def clear_pipes(self) -> None:
+        """Forget every ``<(...)`` output; the shell calls this per call."""
+        self._pipes.clear()
+
     def disk_used(self) -> int:
         """Total bytes of regular files under the writable mounts."""
         roots = [m.host for m in self._mounts if not m.readonly]
@@ -178,6 +193,8 @@ class MountFs:
     def _kind(self, path: str) -> str | None:
         """``"dir"``, ``"file"`` or ``None`` for sandbox *path*."""
         path = _normalize(path)
+        if path in self._pipes:
+            return "file"
         if self._find(path) is not None:
             try:
                 host = self.host_path(path)
@@ -217,6 +234,8 @@ class MountFs:
     def get_node(self, path: str) -> FileNode | DirNode | None:
         """Build a node from the host entry; directories list one level."""
         path = _normalize(path)
+        if path in self._pipes:
+            return FileNode(content=self._pipes[path], mode=0o600)
         kind = self._kind(path)
         if kind is None:
             return None
@@ -240,6 +259,8 @@ class MountFs:
 
     def read(self, path: str) -> bytes:
         path = _normalize(path)
+        if path in self._pipes:
+            return self._pipes[path]
         host = self.host_path(path)
         if host.is_dir():
             raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), path)
@@ -247,8 +268,17 @@ class MountFs:
             return host.read_bytes()
 
     def write(self, path: str, data: bytes, append: bool = False) -> None:
-        """Write *data*, creating missing parents inside the mount."""
+        """Write *data*, creating missing parents inside the mount.
+
+        A ``/dev/fd/procsub_<n>`` path no mount holds is a ``<(...)``
+        output: it stays in memory, readable by the shell's own commands
+        until :meth:`clear_pipes`, and never reaches the host.
+        """
         path = _normalize(path)
+        if self._is_pipe(path):
+            old = self._pipes.get(path, b"") if append else b""
+            self._pipes[path] = old + data
+            return
         host = self.host_path(path, write=True)
         if host.is_dir():
             raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR), path)
