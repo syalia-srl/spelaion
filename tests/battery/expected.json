@@ -1,0 +1,238 @@
+{
+  "cat | wc": {
+    "stdout": "13\n",
+    "exit_code": 0
+  },
+  "grep -n": {
+    "stdout": "5:  - id: w1\n8:  - id: w2\n",
+    "exit_code": 0
+  },
+  "sed -i": {
+    "stdout": "3\n",
+    "exit_code": 0
+  },
+  "heredoc quoted": {
+    "stdout": "hola $X\n",
+    "exit_code": 0
+  },
+  "for | tail -1": {
+    "stdout": "silla-3\n",
+    "exit_code": 0
+  },
+  "$(...)": {
+    "stdout": "n=4\n",
+    "exit_code": 0
+  },
+  "awk | sort | head": {
+    "stdout": "pb\n",
+    "exit_code": 0
+  },
+  "find | xargs wc": {
+    "stdout": "13 /project/plan.yaml\n",
+    "exit_code": 0
+  },
+  "if [ -f ]": {
+    "stdout": "yes\n",
+    "exit_code": 0
+  },
+  "false ||": {
+    "stdout": "recovered\n",
+    "exit_code": 0
+  },
+  "diff -u": {
+    "stdout": "@@ -1,5 +1,5 @@\n levels:\n-  - id: pb\n+  - id: pa\n     height: 2.7\n walls:\n   - id: w1\n",
+    "exit_code": 0
+  },
+  "jq length": {
+    "stdout": "3\n",
+    "exit_code": 0
+  },
+  "printf format": {
+    "stdout": "silla-007\n",
+    "exit_code": 0
+  },
+  "arithmetic": {
+    "stdout": "21\n",
+    "exit_code": 0
+  },
+  "function": {
+    "stdout": "got x\n",
+    "exit_code": 0
+  },
+  "2>&1 |": {
+    "stdout": "cat: /nope: No such file or directory\n",
+    "exit_code": 0
+  },
+  "sort | uniq -c": {
+    "stdout": "      2 alpha\n      3 beta\n      1 gamma\n",
+    "exit_code": 0
+  },
+  "cut | tr": {
+    "stdout": "B\n",
+    "exit_code": 0
+  },
+  "head -n -1": {
+    "stdout": "2\n",
+    "exit_code": 0
+  },
+  "ls | grep": {
+    "stdout": "plan.yaml\n",
+    "exit_code": 0
+  },
+  "tail -1": {
+    "stdout": "2\n",
+    "exit_code": 0
+  },
+  "head -2": {
+    "stdout": "1\n2\n",
+    "exit_code": 0
+  },
+  "wc several files": {
+    "stdout": " 13 plan.yaml\n  5 README.md\n  6 words.txt\n 24 total\n",
+    "exit_code": 0
+  },
+  "grep -rn": {
+    "stdout": "/project/src/app.py:7:    # TODO: parse arguments\n/project/src/util.py:6:    # TODO: unicode\n",
+    "exit_code": 0
+  },
+  "grep -rl --include": {
+    "stdout": "/project/src/app.py\n/project/src/util.py\n",
+    "exit_code": 0
+  },
+  "grep -c no match": {
+    "stdout": "0\nrc=1\n",
+    "exit_code": 0
+  },
+  "find -type f | sort": {
+    "stdout": "./README.md\n./data.json\n./notes with spaces.txt\n./plan.yaml\n./src/app.py\n./src/sub/deep.py\n./src/util.py\n./words.txt\n",
+    "exit_code": 0
+  },
+  "find -name | wc": {
+    "stdout": "3\n",
+    "exit_code": 0
+  },
+  "find -exec grep": {
+    "stdout": "/project/src/app.py\n",
+    "exit_code": 0
+  },
+  "sort | uniq -c | sort -rn": {
+    "stdout": "      3 beta\n",
+    "exit_code": 0
+  },
+  "head -n file": {
+    "stdout": "import sys\n\nfrom util import greet\n",
+    "exit_code": 0
+  },
+  "sed -n range": {
+    "stdout": "  - id: pb\n    height: 2.7\nwalls:\n",
+    "exit_code": 0
+  },
+  "awk sum": {
+    "stdout": "12\n",
+    "exit_code": 0
+  },
+  "awk -F": {
+    "stdout": "end\n",
+    "exit_code": 0
+  },
+  "cat spaces": {
+    "stdout": "2\n",
+    "exit_code": 0
+  },
+  "jq -r .[]": {
+    "stdout": "yaml\nrich\n",
+    "exit_code": 0
+  },
+  "jq select": {
+    "stdout": "13.7\n",
+    "exit_code": 0
+  },
+  "heredoc expands": {
+    "stdout": "hello w\nsub\n",
+    "exit_code": 0
+  },
+  "sed -i multiple": {
+    "stdout": "def salute(name: str) -> str:\n    return f\"hello, {name}\"\n\n\ndef shout(name: str) -> str:\n    return salute(name).upper()\n",
+    "exit_code": 0
+  },
+  "mkdir -p && echo >": {
+    "stdout": "hi\n",
+    "exit_code": 0
+  },
+  "cp -r": {
+    "stdout": "src2/app.py\nsrc2/sub/deep.py\nsrc2/util.py\n",
+    "exit_code": 0
+  },
+  "cp -r into itself": {
+    "stdout": "rc=1\ne\n",
+    "exit_code": 0
+  },
+  "append >>": {
+    "stdout": "one\ntwo\n",
+    "exit_code": 0
+  },
+  "test -d && ||": {
+    "stdout": "dir\n",
+    "exit_code": 0
+  },
+  "test -z": {
+    "stdout": "empty\n",
+    "exit_code": 0
+  },
+  "for over glob": {
+    "stdout": "app.py\nutil.py\n",
+    "exit_code": 0
+  },
+  "while read": {
+    "stdout": "ba\ndc\n",
+    "exit_code": 0
+  },
+  "$? after fail": {
+    "stdout": "1\n",
+    "exit_code": 0
+  },
+  "set -e": {
+    "stdout": "",
+    "exit_code": 1
+  },
+  "null builtin": {
+    "stdout": "0\n",
+    "exit_code": 0
+  },
+  "true in while": {
+    "stdout": "3\n",
+    "exit_code": 0
+  },
+  "case": {
+    "stdout": "py\n",
+    "exit_code": 0
+  },
+  "multi-file error": {
+    "stdout": "13\nrc=1\n",
+    "exit_code": 0
+  },
+  "wc missing file": {
+    "stdout": " 13 plan.yaml\n  6 words.txt\n 19 total\nrc=1\n",
+    "exit_code": 0
+  },
+  "sleep short": {
+    "stdout": "slept\n",
+    "exit_code": 0
+  },
+  "python -c": {
+    "stdout": "45\n",
+    "exit_code": 0
+  },
+  "python yaml": {
+    "stdout": "2\n",
+    "exit_code": 0
+  },
+  "python heredoc": {
+    "stdout": "1.2.0\n",
+    "exit_code": 0
+  },
+  "python | grep": {
+    "stdout": "3\n",
+    "exit_code": 0
+  }
+}
