@@ -17,10 +17,11 @@ from collections.abc import Callable
 from multiprocessing.connection import Connection
 from pathlib import Path
 from types import TracebackType
-from typing import Any, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 from spelaion import _child
 from spelaion._host import HostContext, HostHandler, add_attachment, show
+from spelaion._tools import Tool, describe_bash, make_tools
 from spelaion._types import Attachment, Limits, Result
 from spelaion._wire import (
     BadMessage,
@@ -34,6 +35,9 @@ from spelaion._wire import (
 )
 from spelaion.semantics.resolve import BUILTIN_NAMES
 from spelaion.vfs.mounts import Mount, MountFs
+
+if TYPE_CHECKING:
+    from spelaion._mcp import McpServer
 
 H = TypeVar("H", bound=HostHandler)
 
@@ -145,6 +149,33 @@ class Sandbox:
     def write(self, path: str, content: str) -> Result:
         """Create or overwrite *path* with *content*."""
         return self._call("write", {"path": path, "content": content})
+
+    def tools(self) -> list[Tool]:
+        """``bash``, ``edit`` and ``write`` for an agent loop in this process.
+
+        ``bash``'s description names the mounts, the working directory and
+        the host commands registered when this is called.
+        """
+        description = describe_bash(
+            self._mounts, self._cwd, self.python, list(self._handlers)
+        )
+        return make_tools(self.bash, self.edit, self.write, description)
+
+    def serve_mcp(
+        self, host: str = "127.0.0.1", port: int = 0, token: str | None = None
+    ) -> McpServer:
+        """Serve :meth:`tools` over MCP's streamable HTTP at ``McpServer.url``.
+
+        It listens on *host* only, at *port*, or a free port for 0, from a
+        background thread. With a *token*, a request without the header
+        ``Authorization: Bearer <token>`` gets 401. Calls arriving together
+        run one after the other. Each ``tools/list`` reads the host commands
+        registered by then. Closing the sandbox does not stop the server:
+        call ``McpServer.stop()``.
+        """
+        from spelaion._mcp import McpServer
+
+        return McpServer(self.tools, host, port, token)
 
     @overload
     def command(self, name: str, /) -> Callable[[H], H]: ...

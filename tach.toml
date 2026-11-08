@@ -132,10 +132,20 @@ path = "spelaion._host"
 depends_on = ["spelaion._types", "spelaion.vfs"]
 
 [[modules]]
+path = "spelaion._tools"
+depends_on = ["spelaion._types", "spelaion.vfs"]
+
+[[modules]]
+path = "spelaion._mcp"
+depends_on = ["spelaion._tools"]
+
+[[modules]]
 path = "spelaion.sandbox"
 depends_on = [
     "spelaion._child",
     "spelaion._host",
+    "spelaion._mcp",
+    "spelaion._tools",
     "spelaion._types",
     "spelaion._wire",
     "spelaion.python",
