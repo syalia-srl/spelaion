@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
+import signal
 import sys
 import time
 from collections.abc import Iterator
@@ -485,3 +487,31 @@ def test_exception_message_hides_the_host_as_given(tmp_path: Path, rw: Path) -> 
 def test_keyword_is_not_a_command_name(sb: Sandbox, word: str) -> None:
     with pytest.raises(ValueError, match="is a shell keyword"):
         sb.command(word)
+
+
+def test_interrupt_survives_a_dead_child(sb: Sandbox) -> None:
+    runs: list[int] = []
+
+    @sb.command
+    def stop(ctx: HostContext, args: list[str]) -> Result:
+        runs.append(1)
+        os.kill(sb._child_pid, signal.SIGKILL)  # pyright: ignore[reportPrivateUsage]
+        os.waitpid(sb._child_pid, 0)  # pyright: ignore[reportPrivateUsage]
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        sb.bash("stop")
+    assert runs == [1]
+    assert sb.bash("echo next").stdout == "next\n"
+
+
+def test_host_exit_codes_wrap_like_bash(sb: Sandbox) -> None:
+    @sb.command
+    def big(ctx: HostContext, args: list[str]) -> Result:
+        if args == ["raise"]:
+            raise SystemExit(1000)
+        return Result(exit_code=1000)
+
+    assert sb.bash("big; echo $?").stdout == "232\n"
+    assert sb.bash("big raise; echo $?").stdout == "232\n"
+    assert sb.bash("big").exit_code == 232

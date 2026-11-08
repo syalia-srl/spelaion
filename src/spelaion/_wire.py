@@ -43,8 +43,12 @@ TEST_HOOKS = "SPELAION_TEST_HOOKS"
 
 
 def max_message(limits: Limits) -> int:
-    """The largest message, in bytes, the parent reads from the child."""
-    return 4 * limits.max_output + 1_000_000
+    """The largest message, in bytes, the parent reads from the child.
+
+    A ``done`` carries stdout and stderr of up to ``max_output`` characters
+    each, and pickle writes a character in up to 4 bytes.
+    """
+    return 8 * limits.max_output + 1_000_000
 
 
 class BadMessage(Exception):
