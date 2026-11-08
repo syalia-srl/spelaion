@@ -158,6 +158,12 @@ CASES: list[Case] = [
     Case("test -z", 'x=""; if [ -z "$x" ]; then echo empty; fi'),
     Case("for over glob", "for f in /project/src/*.py; do basename $f; done"),
     Case("glob skips dot names", "touch .h v && echo * && echo .*"),
+    Case(
+        "glob ../*",
+        "mkdir -p sub e && touch e/x && cd /scratch/sub && echo ../* && ls ../*",
+    ),
+    Case("glob ./*", "touch a b && echo ./*"),
+    Case("glob src/../*", "cd /project && echo src/../*.md src/../s*"),
     Case("while read", "printf 'a b\\nc d\\n' | while read x y; do echo $y$x; done"),
     Case("$? after fail", "grep -q zzz /project/plan.yaml; echo $?"),
     Case("set -e", "set -e; false; echo unreachable"),
