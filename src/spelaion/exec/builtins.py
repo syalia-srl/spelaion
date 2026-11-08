@@ -1048,6 +1048,72 @@ def builtin_unalias(
 # ---------------------------------------------------------------------------
 
 
+def kind_of(name: str, state: ShellState, io: IOContext) -> str | None:
+    """What *name* runs: ``function``, ``builtin``, ``command`` or ``host``."""
+    from spelaion.commands import python_cmd
+    from spelaion.commands._registry import COMMANDS
+
+    if name in state.functions:
+        return "function"
+    if name in BUILTINS:
+        return "builtin"
+    if name in ("python", "python3") and not python_cmd.available():
+        return None
+    if name in COMMANDS:
+        return "command"
+    if io.executor is not None and io.executor.tools.has(name):
+        return "host"
+    return None
+
+
+def builtin_command(
+    args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
+) -> CommandResult:
+    """Implement command: ``-v``/``-V`` say what a name runs; else run it.
+
+    Run without flags, it skips shell functions of the same name.
+    """
+    flags = ""
+    while args and args[0].startswith("-") and len(args[0]) > 1:
+        if args[0] == "--":
+            args = args[1:]
+            break
+        flags += args[0][1:]
+        args = args[1:]
+    if "v" in flags or "V" in flags:
+        rc = 0
+        for name in args:
+            kind = kind_of(name, state, io)
+            if kind is None:
+                if "V" in flags:
+                    io.stderr.write(f"command: {name}: not found\n")
+                rc = 1
+            elif "V" in flags:
+                io.stdout.write(f"{name} is {_KIND_TEXT[kind]}\n")
+            else:
+                io.stdout.write(f"{name}\n")
+        return CommandResult(exit_code=rc)
+    if not args:
+        return CommandResult(exit_code=0)
+    if io.executor is None:
+        io.stderr.write("command: no executor available\n")
+        return CommandResult(exit_code=1)
+    hidden = state.functions.pop(args[0], None)
+    try:
+        return io.executor.execute_argv(args, io)
+    finally:
+        if hidden is not None:
+            state.functions[args[0]] = hidden
+
+
+_KIND_TEXT = {
+    "function": "a function",
+    "builtin": "a shell builtin",
+    "command": "a command",
+    "host": "a host command",
+}
+
+
 def builtin_type(
     args: list[str], state: ShellState, vfs: Filesystem, io: IOContext
 ) -> CommandResult:
@@ -1062,10 +1128,8 @@ def builtin_type(
     for name in args:
         if name in _ALIASES:
             io.stdout.write(f"{name} is aliased to '{_ALIASES[name]}'\n")
-        elif name in state.functions:
-            io.stdout.write(f"{name} is a function\n")
-        elif name in BUILTINS:
-            io.stdout.write(f"{name} is a shell builtin\n")
+        elif (kind := kind_of(name, state, io)) is not None:
+            io.stdout.write(f"{name} is {_KIND_TEXT[kind]}\n")
         else:
             io.stderr.write(f"type: {name}: not found\n")
             rc = 1
@@ -1237,6 +1301,8 @@ _BUILTIN_HELP: dict[str, str] = {
     "export": "export [NAME=VALUE ...] — set export attribute for variables",
     "unset": "unset [NAME ...] — unset variables",
     "true": "true — return success",
+    "command": "command [-vV] NAME [ARG ...] — run NAME, or say what it runs",
+    ":": ": [arg ...] — do nothing, return success",
     "false": "false — return failure",
     "exit": "exit [N] — exit the shell",
     "test": "test EXPR — evaluate conditional expression",
@@ -1509,6 +1575,7 @@ BUILTINS: dict[str, BuiltinFn] = {
     "export": builtin_export,
     "unset": builtin_unset,
     "true": builtin_true,
+    ":": builtin_true,
     "false": builtin_false,
     "exit": builtin_exit,
     "test": builtin_test,
@@ -1524,6 +1591,7 @@ BUILTINS: dict[str, BuiltinFn] = {
     "alias": builtin_alias,
     "unalias": builtin_unalias,
     "type": builtin_type,
+    "command": builtin_command,
     "readonly": builtin_readonly,
     "let": builtin_let,
     "getopts": builtin_getopts,
