@@ -18,6 +18,7 @@ files:
   - chapters/06-images.md
   - chapters/07-own-loop.md
   - chapters/08-mcp.md
+  - chapters/09-harnesses.md
 
 outputs:
   site:
