@@ -1,7 +1,8 @@
-"""spelaion — Virtual Bash parser and agent executor."""
+"""spelaion: a bash for agents, run from Python, with nothing real behind it."""
 
 __version__ = "0.1.0"
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from spelaion._host import HostContext, HostHandler
@@ -19,6 +20,9 @@ from spelaion.vfs.mounts import Mount
 
 if TYPE_CHECKING:
     from spelaion._mcp import McpServer
+
+# A library logs; the application decides where it goes.
+logging.getLogger("spelaion").addHandler(logging.NullHandler())
 
 
 def __getattr__(name: str) -> Any:
