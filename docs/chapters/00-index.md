@@ -30,7 +30,7 @@ first commands. The User Guide then takes one job per chapter, from mounting
 folders to running Claude Code with nothing but these tools. The Developer
 Guide shows how the shell is built and how to add a command to it.
 
-Every block of code in this book ran against spelaion when the book was
+This book is also a [PDF](spelaion.pdf). Every block of code in it ran against spelaion when the book was
 built, and the output under it is what it printed. Each chapter's finished
 program is in
 [`docs/examples/`](https://github.com/syalia-srl/spelaion/tree/main/docs/examples).

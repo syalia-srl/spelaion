@@ -1,0 +1,55 @@
+name: Docs
+
+# The book renders with every block executed, docs/examples/ matches the
+# chapters, the examples run, and rift finds every exported name in the
+# chapters (make docs-check). A push to main publishes the site and its PDF
+# on GitHub Pages.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  book:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      # WeasyPrint renders the PDF with Pango.
+      - run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+      - run: uv sync --frozen --all-groups
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/spelaion
+          key: python-wasi-8de7834105edef8db8a13299e2587cf8945021dd8764f2691d83bbc25129dfa2-${{ hashFiles('uv.lock') }}
+          restore-keys: python-wasi-8de7834105edef8db8a13299e2587cf8945021dd8764f2691d83bbc25129dfa2-
+      - run: make docs-check
+      - run: make pdf
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+
+  pages:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: book
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

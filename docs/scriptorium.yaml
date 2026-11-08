@@ -18,5 +18,7 @@ outputs:
     dir: site
     repo-url: https://github.com/syalia-srl/spelaion
     version: auto
+  # Rendered after the site, into it, so the web book links it for download.
   print:
     format: pdf
+    file: site/spelaion.pdf
