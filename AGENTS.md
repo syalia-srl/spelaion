@@ -43,6 +43,12 @@ uv run tach check
 uv run pytest -q
 ```
 
+The book in `docs/` is the user and developer guide; `make docs-check` renders
+it with every block run, runs the tangled examples and checks rift's coverage
+rules, and the Docs workflow runs it on every pull request. A change to
+behaviour updates the chapter that describes it; `docs/chapters/20-architecture.md`
+has the layout. Never edit `docs/examples/`: the chapters tangle it.
+
 After adding an import between modules, `uv run tach sync` updates `tach.toml`.
 
 Tests marked `wasi` need CPython for WASI, which the first one downloads
