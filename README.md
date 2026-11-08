@@ -150,13 +150,14 @@ See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ## The shell
 
-The interpreter parses with tree-sitter-bash into its own AST and evaluates it in Python: 128 commands and 39 builtins, among them grep, sed, awk, jq, yq, find, xargs, diff, patch, sort, uniq, cut, tr, head, tail, wc, tar and gzip. Syntax covers variables and parameter expansion, indexed and associative arrays, quoting, command and process substitution, arithmetic, `if`/`while`/`until`/`for`/`case`, `[ ]` and `[[ ]]`, functions, subshells, groups, pipelines, `&&`/`||`, redirections, here-documents and here-strings. Syntax it does not support is reported as an error, never silently ignored.
+The interpreter parses with tree-sitter-bash into its own AST and evaluates it in Python: 128 commands and 39 builtins, among them grep, sed, awk, jq, yq, find, xargs, diff, patch, sort, uniq, cut, tr, head, tail, wc, tar and gzip. Syntax covers variables and parameter expansion, indexed and associative arrays, quoting, command and process substitution, arithmetic, `if`/`while`/`until`/`for`/`case`, `[ ]` and `[[ ]]`, functions, subshells, groups, pipelines, `&&`/`||`, redirections, here-documents and here-strings. Syntax it cannot parse is reported as an error. Where it parses a command and then does less than bash without saying so (awk's control flow, `cmd &`), the gap is listed under Known gaps.
 
 `tests/battery` holds commands typical of coding agents (pipes into `head` and `tail`, `sed -i`, heredocs, `find | xargs`, `$(...)`, `diff -u`, `grep -rn`, `jq`, `python -c` with yaml). `record.py` runs each under real bash 5 and commits what it printed; the test runs each through a `Sandbox` and compares stdout and exit code.
 
 ## Known gaps
 
 - awk is a subset: patterns, `print`, `printf`, assignments and arithmetic. It has no built-in functions (`length`, `substr`, `split`, `gsub`, ...) and no `if`, `for` or `while` inside actions, which it skips without an error.
+- A here-document followed on its own line by `;` or `&` (`cat <<EOF; echo next`) is a syntax error; put the next command after the terminator. `>`, `|`, `&&` and `||` there work.
 - `/dev/null` works in redirections only; `cat /dev/null` or `diff f /dev/null` say it does not exist.
 - `cmd &` runs `cmd` in the foreground: there are no background processes or job control. `sleep` sleeps, within the call's deadline.
 - Symlinks and hard links cannot be created (`ln` fails with a message). `grep -r` follows a symlink to a file inside its mount, where GNU grep skips it.

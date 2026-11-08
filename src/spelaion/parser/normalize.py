@@ -872,19 +872,89 @@ def _normalize_standalone_assignment(
 
 
 def _redirect_last(
-    inner: ASTNode, redirs: tuple[Redirection, ...], span: Span
+    inner: ASTNode,
+    redirs: tuple[Redirection, ...],
+    span: Span,
+    args: tuple[Word, ...] = (),
 ) -> ASTNode:
-    """Give *redirs* to the command they follow.
+    """Give *redirs* (and words that trail a here-doc) to the command they follow.
 
     tree-sitter-bash reads ``a && b > f`` and ``a | b > f`` as the whole list
     or pipeline redirected; in bash the redirection belongs to ``b`` alone.
     """
     if isinstance(inner, SimpleCommand):
-        return replace(inner, redirections=inner.redirections + redirs, span=span)
+        return replace(
+            inner,
+            words=inner.words + args,
+            redirections=inner.redirections + redirs,
+            span=span,
+        )
     if isinstance(inner, AndOrList | Pipeline) and inner.commands:
-        last = _redirect_last(inner.commands[-1], redirs, inner.commands[-1].span)
+        last = _redirect_last(
+            inner.commands[-1], redirs, inner.commands[-1].span, args
+        )
         return replace(inner, commands=(*inner.commands[:-1], last))
     return RedirectedCommand(body=inner, redirections=redirs, span=span)
+
+
+def _heredoc_tail(
+    node: Node,
+    source: str,
+    diagnostics: list[Diagnostic],
+    redirs: list[Redirection],
+    args: list[Word],
+    tail: list[tuple[str, ASTNode]],
+) -> None:
+    """Collect what tree-sitter-bash nests inside a ``heredoc_redirect``.
+
+    The rest of the line after ``<<EOF`` (``> f``, ``| wc -l``, ``&& echo``,
+    more words) is parsed as children of the here-doc node; bash reads it as
+    the command's own redirections and arguments, or the pipeline or list
+    the command continues.
+    """
+    op = ""
+    for i, child in enumerate(node.children):
+        if not child.is_named:
+            text = _node_text(child, source)
+            if text in ("&&", "||"):
+                op = text
+            continue
+        if child.type in _REDIRECT_TYPES:
+            redirs.append(_normalize_redirection(child, source, diagnostics))
+        elif child.type == "pipeline":
+            for part in _named_children(child):
+                rest = _normalize_node(part, source, diagnostics)
+                if rest is not None:
+                    tail.append(("|", rest))
+        elif op:
+            rest = _normalize_node(child, source, diagnostics)
+            if rest is not None:
+                tail.append((op, rest))
+            op = ""
+        elif node.field_name_for_child(i) == "argument":
+            args.append(_normalize_word_node(child, source))
+
+
+def _pipe(left: ASTNode, right: ASTNode, span: Span) -> ASTNode:
+    """``left | right``, binding ``|`` tighter than ``&&``, ``||`` and ``;``."""
+    if isinstance(left, AndOrList) and left.commands:
+        last = _pipe(left.commands[-1], right, span)
+        return replace(left, commands=(*left.commands[:-1], last))
+    if isinstance(right, AndOrList | Sequence) and right.commands:
+        first = _pipe(left, right.commands[0], span)
+        return replace(right, commands=(first, *right.commands[1:]))
+    lhs = left.commands if isinstance(left, Pipeline) else (left,)
+    rhs = right.commands if isinstance(right, Pipeline) else (right,)
+    negated = isinstance(left, Pipeline) and left.negated
+    return Pipeline(commands=(*lhs, *rhs), negated=negated, span=span)
+
+
+def _and_or(left: ASTNode, op: str, right: ASTNode, span: Span) -> ASTNode:
+    """``left op right``; ``&&`` and ``||`` group to the left."""
+    if isinstance(right, AndOrList) and right.commands:
+        first = _and_or(left, op, right.commands[0], span)
+        return replace(right, commands=(first, *right.commands[1:]))
+    return AndOrList(operators=(op,), commands=(left, right), span=span)
 
 
 def _normalize_redirected_statement(
@@ -899,10 +969,21 @@ def _normalize_redirected_statement(
     if body_node is not None:
         inner = _normalize_node(body_node, source, diagnostics)
         if redirect_nodes and inner is not None:
-            extra_redirs = tuple(
-                _normalize_redirection(r, source, diagnostics) for r in redirect_nodes
-            )
-            return _redirect_last(inner, extra_redirs, _span(node))
+            redirs: list[Redirection] = []
+            args: list[Word] = []
+            tail: list[tuple[str, ASTNode]] = []
+            for r in redirect_nodes:
+                redirs.append(_normalize_redirection(r, source, diagnostics))
+                if r.type == "heredoc_redirect":
+                    _heredoc_tail(r, source, diagnostics, redirs, args, tail)
+            out = _redirect_last(inner, tuple(redirs), _span(node), tuple(args))
+            for op, rest in tail:
+                out = (
+                    _pipe(out, rest, _span(node))
+                    if op == "|"
+                    else _and_or(out, op, rest, _span(node))
+                )
+            return out
         return inner  # type: ignore[return-value]
 
     # Fallback

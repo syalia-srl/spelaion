@@ -122,6 +122,20 @@ CASES: list[Case] = [
         "heredoc expands",
         "NAME=w; cat > b.txt <<EOF\nhello $NAME\n$(echo sub)\nEOF\ncat b.txt",
     ),
+    Case("heredoc > f", "cat <<'EOF' > f\nhola $X\nEOF\ncat f"),
+    Case("heredoc | wc", "cat <<EOF | wc -l\na\nb\nEOF"),
+    Case("heredoc &&", "cat <<EOF && echo after\nx\nEOF"),
+    Case("heredoc >> f", "echo one > f && cat <<EOF >> f\ntwo\nEOF\ncat f"),
+    Case(
+        "heredoc | | && ||",
+        "cat <<EOF | grep b | wc -l && echo ok || echo no\nb\na\nb\nEOF",
+    ),
+    Case("&& heredoc |", "false && cat <<EOF | wc -l\nx\nEOF\necho rc=$?"),
+    Case("heredoc > f &&", "cat <<EOF > g && cat g\nY=$((1+1))\nEOF"),
+    Case(
+        "heredoc $VAR > f",
+        "N=7; cat <<EOF > v.txt\nn=$N\nEOF\ncat <<'EOF' >> v.txt\nn=$N\nEOF\ncat v.txt",
+    ),
     Case(
         "sed -i multiple",
         "cp /project/src/util.py u.py && sed -i -e 's/greet/salute/g' -e '/TODO/d' u.py"
@@ -197,6 +211,11 @@ CASES: list[Case] = [
         "python heredoc",
         "python3 - <<'EOF'\nimport json\n"
         "print(json.load(open('/project/data.json'))['version'])\nEOF",
+        python=True,
+    ),
+    Case(
+        "python heredoc > f",
+        "python3 - <<'EOF' > out.txt\nprint(2 ** 10)\nEOF\ncat out.txt",
         python=True,
     ),
     Case("python | grep", "python3 -c 'print(\"a\\nb\\nc\")' | grep -c .", python=True),
