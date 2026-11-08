@@ -205,9 +205,8 @@ class TestGlobbing:
         state.cwd = "/test"
         word = _word(GlobSegment(pattern="*.txt"))
         result = expand_word(word, state, vfs)
-        assert "/test/a.txt" in result
-        assert "/test/b.txt" in result
-        assert "/test/c.py" not in result
+        # bash keeps a relative pattern's matches relative.
+        assert result == ["a.txt", "b.txt"]
 
     def test_glob_no_match_keeps_literal(self) -> None:
         vfs = VirtualFilesystem()

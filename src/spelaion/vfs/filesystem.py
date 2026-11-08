@@ -348,10 +348,19 @@ class VirtualFilesystem:
     def glob(self, pattern: str, cwd: str) -> list[str]:
         """Return sorted absolute paths matching an fnmatch *pattern*.
 
-        The pattern is resolved against *cwd* first, then matched
-        against all paths in the VFS tree using ``fnmatch``.
+        The pattern is resolved against *cwd* first, then matched against
+        all paths in the VFS tree one component at a time: as in bash,
+        ``*`` never matches ``/`` and only ``.x`` matches a dot name.
         """
-        abs_pattern = self.resolve(pattern, cwd)
+        want = self.resolve(pattern, cwd).strip("/").split("/")
+
+        def matches(path: str) -> bool:
+            have = path.strip("/").split("/")
+            return len(have) == len(want) and all(
+                fnmatch.fnmatchcase(h, w)
+                and (w.startswith(".") or not h.startswith("."))
+                for h, w in zip(have, want, strict=True)
+            )
+
         all_paths = ["/", *list(self._walk(self.root, "/"))]
-        matched = [p for p in all_paths if fnmatch.fnmatch(p, abs_pattern)]
-        return sorted(matched)
+        return sorted(p for p in all_paths if matches(p))

@@ -13,6 +13,7 @@ Expansion pipeline:
 from __future__ import annotations
 
 import fnmatch as _fnmatch
+import posixpath
 import re as _re
 from typing import TYPE_CHECKING, Protocol
 
@@ -83,7 +84,9 @@ class WordEvaluator:
             if has_glob:
                 matches = self.vfs.glob(field_text, self.state.cwd)
                 if matches:
-                    final.extend(matches)
+                    final.extend(
+                        _as_written(field_text, m, self.state.cwd) for m in matches
+                    )
                 else:
                     final.append(field_text)
             else:
@@ -580,3 +583,11 @@ def _glob_to_regex(pattern: str) -> str:
             result += _re.escape(c)
         i += 1
     return result
+
+
+def _as_written(pattern: str, match: str, cwd: str) -> str:
+    """*match*, absolute, in the form *pattern* had: bash keeps ``*.py`` relative."""
+    if pattern.startswith("/"):
+        return match
+    rel = posixpath.relpath(match, cwd)
+    return "./" + rel if pattern.startswith("./") else rel

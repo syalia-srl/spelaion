@@ -130,11 +130,8 @@ CASES: list[Case] = [
     ),
     Case("test -d && ||", "[ -d /project/src ] && echo dir || echo none"),
     Case("test -z", 'x=""; if [ -z "$x" ]; then echo empty; fi'),
-    Case(
-        "for over glob",
-        "for f in /project/src/*.py; do basename $f; done",
-        gap="* in a glob matches /",
-    ),
+    Case("for over glob", "for f in /project/src/*.py; do basename $f; done"),
+    Case("glob skips dot names", "touch .h v && echo * && echo .*"),
     Case("while read", "printf 'a b\\nc d\\n' | while read x y; do echo $y$x; done"),
     Case("$? after fail", "grep -q zzz /project/plan.yaml; echo $?"),
     Case("set -e", "set -e; false; echo unreachable"),

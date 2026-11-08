@@ -187,6 +187,10 @@
     "stdout": "app.py\nutil.py\n",
     "exit_code": 0
   },
+  "glob skips dot names": {
+    "stdout": "v\n.h\n",
+    "exit_code": 0
+  },
   "while read": {
     "stdout": "ba\ndc\n",
     "exit_code": 0

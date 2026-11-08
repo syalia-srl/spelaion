@@ -23,6 +23,13 @@ from spelaion.vfs.nodes import DirNode, FileNode
 _GLOB_CHARS = frozenset("*?[")
 
 
+def _component_matches(name: str, part: str) -> bool:
+    """Whether one path component *name* matches the glob component *part*."""
+    if name.startswith(".") and not part.startswith("."):
+        return False
+    return fnmatch.fnmatchcase(name, part)
+
+
 @dataclass(frozen=True)
 class Mount:
     """A host folder visible inside the sandbox at *path*."""
@@ -409,17 +416,25 @@ class MountFs:
                 entry.unlink()
 
     def glob(self, pattern: str, cwd: str) -> list[str]:
-        """Sorted absolute paths matching *pattern*, walked from its fixed prefix."""
-        abs_pattern = self.resolve(pattern, cwd)
-        fixed: list[str] = []
-        for part in abs_pattern.strip("/").split("/"):
-            if _GLOB_CHARS & set(part):
-                break
-            fixed.append(part)
-        base = "/" + "/".join(fixed)
-        candidates = [base] if self.exists(base) else []
-        for dirpath, dirnames, filenames in self.walk(base):
-            candidates.extend(
-                dirpath.rstrip("/") + "/" + n for n in dirnames + filenames
-            )
-        return sorted(p for p in candidates if fnmatch.fnmatch(p, abs_pattern))
+        """Sorted absolute paths matching *pattern*, one component at a time.
+
+        As in bash, ``*`` and ``?`` never match ``/``, and a name that starts
+        with a dot matches only a pattern component that does.
+        """
+        parts = self.resolve(pattern, cwd).strip("/").split("/")
+        found = ["/"]
+        for part in parts:
+            if not part:
+                continue
+            if not _GLOB_CHARS & set(part):
+                found = [f.rstrip("/") + "/" + part for f in found]
+                found = [f for f in found if self.exists(f)]
+                continue
+            found = [
+                f.rstrip("/") + "/" + name
+                for f in found
+                if self.is_dir(f)
+                for name in self.listdir(f)
+                if _component_matches(name, part)
+            ]
+        return sorted(found)
