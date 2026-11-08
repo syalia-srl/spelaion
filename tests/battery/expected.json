@@ -184,7 +184,7 @@
     "exit_code": 0
   },
   "awk -F": {
-    "stdout": "end\n",
+    "stdout": "3 2.7\n",
     "exit_code": 0
   },
   "cat spaces": {

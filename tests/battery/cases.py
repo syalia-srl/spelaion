@@ -110,7 +110,7 @@ CASES: list[Case] = [
         "awk '{t+=length($0)} END {print t}' /project/words.txt",
         gap="awk has no built-in functions (length, substr, split, ...)",
     ),
-    Case("awk -F", "awk -F': ' '/version/ {print NR}' /project/plan.yaml; echo end"),
+    Case("awk -F", "awk -F': ' '/height/ {print NR, $2}' /project/plan.yaml"),
     Case("cat spaces", "cat '/project/notes with spaces.txt' | wc -l"),
     Case("jq -r .[]", "jq -r '.deps[].name' /project/data.json"),
     Case(
