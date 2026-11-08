@@ -1,0 +1,69 @@
+# The book covers the library: every name the package exports is named in the
+# chapters, and every public method of the classes a reader uses somewhere (a warning,
+# because a short name such as `run` passes on any use of the word). Only the
+# exported API counts: the parser's and the commands' classes are internal.
+
+rules:
+
+  - name: "every exported name is named in the docs"
+    extract:
+      file: "src/spelaion/__init__.py"
+      regex: '^    "(\w+)",$'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every public method of Sandbox is named in the docs"
+    severity: warning
+    extract:
+      file: "src/spelaion/sandbox.py"
+      regex: '^    def ([a-z]\w*)\((?:self\b|$)'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every public method of HostContext is named in the docs"
+    severity: warning
+    extract:
+      file: "src/spelaion/_host.py"
+      regex: '^    def ([a-z]\w*)\((?:self\b|$)'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every public method of McpServer is named in the docs"
+    severity: warning
+    extract:
+      file: "src/spelaion/_mcp.py"
+      regex: '^    def ([a-z]\w*)\((?:self\b|$)'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every public method of Bash is named in the docs"
+    severity: warning
+    extract:
+      file: "src/spelaion/api/bash.py"
+      regex: '^    def ([a-z]\w*)\((?:self\b|$)'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every command is named in the docs"
+    severity: warning
+    extract:
+      file: "src/spelaion/commands/*.py"
+      regex: '@command\("([a-z][\w.-]*)"'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every builtin is named in the docs"
+    severity: warning
+    extract:
+      file: "src/spelaion/semantics/resolve.py"
+      # The punctuation builtins (:, ., [, [[) cannot match as a word.
+      regex: '^        "([a-z]\w*)",$'
+    require:
+      in: "docs/chapters/*.md"
+      as: word
