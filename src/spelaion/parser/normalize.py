@@ -7,6 +7,7 @@ Unsupported syntax raises explicit diagnostics.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 from tree_sitter import Node
@@ -870,6 +871,22 @@ def _normalize_standalone_assignment(
     )
 
 
+def _redirect_last(
+    inner: ASTNode, redirs: tuple[Redirection, ...], span: Span
+) -> ASTNode:
+    """Give *redirs* to the command they follow.
+
+    tree-sitter-bash reads ``a && b > f`` and ``a | b > f`` as the whole list
+    or pipeline redirected; in bash the redirection belongs to ``b`` alone.
+    """
+    if isinstance(inner, SimpleCommand):
+        return replace(inner, redirections=inner.redirections + redirs, span=span)
+    if isinstance(inner, AndOrList | Pipeline) and inner.commands:
+        last = _redirect_last(inner.commands[-1], redirs, inner.commands[-1].span)
+        return replace(inner, commands=(*inner.commands[:-1], last))
+    return RedirectedCommand(body=inner, redirections=redirs, span=span)
+
+
 def _normalize_redirected_statement(
     node: Node, source: str, diagnostics: list[Diagnostic]
 ) -> ASTNode:
@@ -881,25 +898,11 @@ def _normalize_redirected_statement(
 
     if body_node is not None:
         inner = _normalize_node(body_node, source, diagnostics)
-        if isinstance(inner, SimpleCommand) and redirect_nodes:
-            extra_redirs = [
-                _normalize_redirection(r, source, diagnostics) for r in redirect_nodes
-            ]
-            return SimpleCommand(
-                words=inner.words,
-                assignments=inner.assignments,
-                redirections=inner.redirections + tuple(extra_redirs),
-                span=_span(node),
-            )
         if redirect_nodes and inner is not None:
-            extra_redirs = [
+            extra_redirs = tuple(
                 _normalize_redirection(r, source, diagnostics) for r in redirect_nodes
-            ]
-            return RedirectedCommand(
-                body=inner,
-                redirections=tuple(extra_redirs),
-                span=_span(node),
             )
+            return _redirect_last(inner, extra_redirs, _span(node))
         return inner  # type: ignore[return-value]
 
     # Fallback

@@ -167,6 +167,26 @@
     "stdout": "rc=1\ne\n",
     "exit_code": 0
   },
+  "&& then >": {
+    "stdout": "a\n--\nb\n",
+    "exit_code": 0
+  },
+  "| then >": {
+    "stdout": "b\n",
+    "exit_code": 0
+  },
+  "2>/dev/null": {
+    "stdout": "rc=1\n",
+    "exit_code": 0
+  },
+  ">/dev/null 2>&1": {
+    "stdout": "quiet\n",
+    "exit_code": 0
+  },
+  "< /dev/null": {
+    "stdout": "0\n",
+    "exit_code": 0
+  },
   "append >>": {
     "stdout": "one\ntwo\n",
     "exit_code": 0
@@ -209,6 +229,14 @@
   },
   "true in while": {
     "stdout": "3\n",
+    "exit_code": 0
+  },
+  "command -v": {
+    "stdout": "has jq\n",
+    "exit_code": 0
+  },
+  "command -v missing": {
+    "stdout": "missing\n",
     "exit_code": 0
   },
   "case": {
