@@ -92,24 +92,17 @@ last pipeline, so `1 0 1` above is the two failing `false` commands around
 the successful `true`. `set -o pipefail` makes a pipeline return the first
 failure instead.
 
-Process substitution parses, but a `Sandbox` does not run it. The evaluator
-writes the producer's output to a path under `/dev/fd`, and no mount
-provides `/dev/fd`, so the call ends with an internal error:
+Process substitution runs in both a `Sandbox` and the in-memory `Bash`. The
+producer's output goes to a path under `/dev/fd` that exists only for the
+call: it lives in memory, maps to no host folder and does not show in `ls /`.
 
 ```{python continue}
-from spelaion import Bash
-
-print(Bash().run("cat <(printf 'from a producer\\n')").stdout, end="")
-r = sb.bash("cat <(printf 'from a producer\\n')")
-print(r.stderr, end="")
+r = sb.bash("cat <(echo from one producer) <(echo from another)")
+print(r.stdout, end="")
 print("exit code:", r.exit_code)
 ```
 
-The in-memory `Bash` class has a writable in-memory filesystem, so it runs
-the line; [Testing with bash](testing-shell-scripts-with-bash.html) covers that class.
-The sandbox failure is a bug, tracked in [#8](https://github.com/syalia-srl/spelaion/issues/8).
-
-Brace expansion is not supported either. `echo {a,b}` prints `{a,b}`, with
+Brace expansion is not supported. `echo {a,b}` prints `{a,b}`, with
 no error, which is worse than a syntax error because the line looks as if
 it worked ([#7](https://github.com/syalia-srl/spelaion/issues/7)).
 
