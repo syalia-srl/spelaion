@@ -235,6 +235,18 @@
     "stdout": "n=7\nn=$N\n",
     "exit_code": 0
   },
+  "heredoc body ' EOF'": {
+    "stdout": " EOF\necho inside\nafter\n",
+    "exit_code": 0
+  },
+  "heredoc body EOFX": {
+    "stdout": "EOFX\nthe EOF is here\n",
+    "exit_code": 0
+  },
+  "heredoc <<- tabs": {
+    "stdout": "x\n EOF\nok\n",
+    "exit_code": 0
+  },
   "sed -i multiple": {
     "stdout": "def salute(name: str) -> str:\n    return f\"hello, {name}\"\n\n\ndef shout(name: str) -> str:\n    return salute(name).upper()\n",
     "exit_code": 0
