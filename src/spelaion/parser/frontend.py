@@ -79,8 +79,7 @@ def parse_script(text: str) -> ParseResult:
     The result contains the tree-sitter CST, the source text,
     and any diagnostics (syntax errors).
     """
-    source_bytes = text.encode("utf-8")
-    tree = _PARSER.parse(source_bytes)
+    tree = _PARSER.parse(_mask_heredoc_bodies(text.encode("utf-8")))
     root = tree.root_node
     diagnostics = _collect_errors(root, text)
     has_errors = len(diagnostics) > 0 or root.has_error
@@ -91,6 +90,68 @@ def parse_script(text: str) -> ParseResult:
         diagnostics=diagnostics,
         has_errors=has_errors,
     )
+
+
+def _heredocs(node: Node) -> list[Node]:
+    """Every ``heredoc_redirect`` under *node*, in source order."""
+    found: list[Node] = []
+    stack = [node]
+    while stack:
+        n = stack.pop()
+        if n.type == "heredoc_redirect":
+            found.append(n)
+        stack.extend(reversed(n.children))
+    return sorted(found, key=lambda n: n.start_byte)
+
+
+def _mask_heredoc_bodies(source: bytes) -> bytes:
+    """*source* with each here-document body overwritten, byte for byte.
+
+    tree-sitter-bash ends a body at a line that only starts with the
+    delimiter, or has blanks before it (`` EOF``, ``EOFX``), and parses the
+    rest as commands. Here a body ends, as in bash, at the first line that
+    is exactly the delimiter, or tabs and the delimiter for ``<<-``; its
+    bytes become a filler that cannot end it. Offsets do not move, so the
+    normaliser reads the real body from the original text.
+    """
+    done = -1
+    # Where the next body on a line starts, when that line has several.
+    after: dict[int, int] = {}
+    while True:
+        tree = _PARSER.parse(source)
+        pending = [h for h in _heredocs(tree.root_node) if h.start_byte > done]
+        start = (
+            next((c for c in pending[0].children if c.type == "heredoc_start"), None)
+            if pending
+            else None
+        )
+        if start is None:
+            return source
+        h = pending[0]
+        done = h.start_byte
+        dash = any(source[c.start_byte : c.end_byte] == b"<<-" for c in h.children)
+        delimiter = source[start.start_byte : start.end_byte]
+        for q in (b"'", b'"', b"\\"):
+            delimiter = delimiter.replace(q, b"")
+        line_end = source.find(b"\n", start.end_byte)
+        if line_end < 0:
+            return source
+        begin = after.get(line_end, line_end + 1)
+        pos = begin
+        while pos < len(source):
+            nl = source.find(b"\n", pos)
+            end = len(source) if nl < 0 else nl
+            line = source[pos:end]
+            if line == delimiter or (dash and line.lstrip(b"\t") == delimiter):
+                break
+            pos = end + 1
+        body_end = min(pos, len(source))
+        after[line_end] = min(
+            source.find(b"\n", body_end) + 1 or len(source), len(source)
+        )
+        fill = next(b for b in b"xyz" if b not in delimiter)
+        body = bytes(b if b == 10 else fill for b in source[begin:body_end])
+        source = source[:begin] + body + source[body_end:]
 
 
 def span_from_node(node: Node) -> Span:
