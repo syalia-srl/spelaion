@@ -108,6 +108,11 @@ the sandbox ends the call first, and that result has `timed_out=True`. [The
 shell](what-the-shell-can-do.html) lists the commands spelaion implements and where they
 differ from bash.
 
+A loop is bounded by the call's deadline too. On top of that, a `while` or
+`until` loop, or a C-style `for ((...))`, that runs a million times stops the
+whole script with an `iteration limit reached` line on stderr and exit code 1,
+so a script never carries on as if a cut-short loop had finished.
+
 ## Cutting long output
 
 `max_output` bounds what a call hands back. A command may print more; the

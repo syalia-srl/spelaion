@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A mount given with a relative host folder is resolved once, when the
+  `Sandbox` is made, so changing the product's working directory and then
+  restarting the child no longer points the shell at another folder.
+- Command substitution reports its errors: running out of memory ends the
+  call, the inner stderr reaches the outer one, and `x=$(cmd); echo $?`
+  prints `cmd`'s status.
+- Process substitution, `<(cmd)`, works in a `Sandbox`, over a `/dev/fd`
+  that lives in memory for one call (#8).
+- In a `Sandbox`, `while`, `until` and C-style `for` loops run up to a
+  million times, then stop the script with exit code 1. Before, they
+  stopped silently after 500 and the script went on.
+- A here-document ends only at a line that is exactly its delimiter, so a
+  body line such as ` EOF` or `EOFX` no longer ends it early.
+- `SystemExit` in the shell maps as in Python: `None` is 0, an integer is
+  wrapped to 0 to 255, anything else is 1 with the message on stderr.
+- A mount path is normalised before the check that reserves `/lib` and
+  `/site` for python, so `//lib` is refused too.
+- The `bash` tool's description names `show` once.
+
+### Changed
+
+- `mcp` may be any 2.x from 2.3; `wasmtime` stays below 51.
+
 ## 0.1.0 — 2026-11-08
 
 First release. spelaion starts from a copy of an MIT-licensed shell by
