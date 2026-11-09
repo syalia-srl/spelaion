@@ -88,8 +88,7 @@ class Sandbox:
         # a restarted child must not resolve a relative host against a later cwd.
         given = mounts
         mounts = [
-            Mount(_normalize(m.path), Path(m.host).resolve(), m.readonly)
-            for m in given
+            Mount(_normalize(m.path), Path(m.host).resolve(), m.readonly) for m in given
         ]
         _check_mounts(mounts)
         # The prepared folder, absolute, so a restarted child never reads
