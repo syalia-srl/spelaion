@@ -89,6 +89,8 @@ def describe_bash(
     python_text = (
         "python has the standard library and PyYAML" if python else "there is no python"
     )
+    others = [c for c in commands if c != "show"]
+    extra = f" Extra commands: {', '.join(others)}." if others else ""
     return (
         "Run a command in an emulated bash shell. "
         f"Folders: {folders}. "
@@ -98,8 +100,7 @@ def describe_bash(
         f"There is no network, no pip, no background processes; {python_text}. "
         f"A call times out after {timeout_s:g} seconds; long output is cut with "
         "a notice. "
-        f"Extra commands: {', '.join(commands)}. "
-        "show FILE... shows you PNG, JPEG or WebP images."
+        "show FILE... shows you PNG, JPEG or WebP images." + extra
     )
 
 

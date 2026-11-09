@@ -71,14 +71,14 @@ def test_description_lists_host_commands_at_call_time(sb: Sandbox) -> None:
         return Result()
 
     description = by_name(sb)["bash"].description
-    assert "Extra commands: show, oikos-check." in description
+    assert "Extra commands: oikos-check." in description
 
     @sb.command
     def later(ctx: HostContext, args: list[str]) -> Result:
         return Result()
 
     assert "later" not in description
-    assert "show, oikos-check, later." in by_name(sb)["bash"].description
+    assert "Extra commands: oikos-check, later." in by_name(sb)["bash"].description
 
 
 def test_description_text(sb: Sandbox) -> None:
@@ -90,7 +90,6 @@ def test_description_text(sb: Sandbox) -> None:
         "persist; files do. "
         "There is no network, no pip, no background processes; there is no python. "
         "A call times out after 30 seconds; long output is cut with a notice. "
-        "Extra commands: show. "
         "show FILE... shows you PNG, JPEG or WebP images."
     )
 
