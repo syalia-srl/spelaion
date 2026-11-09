@@ -136,6 +136,9 @@ CASES: list[Case] = [
         "heredoc $VAR > f",
         "N=7; cat <<EOF > v.txt\nn=$N\nEOF\ncat <<'EOF' >> v.txt\nn=$N\nEOF\ncat v.txt",
     ),
+    Case("heredoc body ' EOF'", "cat <<EOF\n EOF\necho inside\nEOF\necho after"),
+    Case("heredoc body EOFX", "cat <<'EOF' > h\nEOFX\nthe EOF is here\nEOF\ncat h"),
+    Case("heredoc <<- tabs", "cat <<-EOF\n\tx\n\t EOF\n\tEOF\necho ok"),
     Case(
         "sed -i multiple",
         "cp /project/src/util.py u.py && sed -i -e 's/greet/salute/g' -e '/TODO/d' u.py"
